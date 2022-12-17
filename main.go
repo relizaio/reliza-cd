@@ -19,18 +19,22 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
 	"os/exec"
+
+	"go.uber.org/zap"
 )
 
 const ShellToUse = "sh"
 const HelmApp = "tools/helm"
 const KubesealApp = "tools/kubeseal"
 
-var (
-	logBuf bytes.Buffer
-	logger = log.New(&logBuf, "logger: ", log.Lshortfile)
-)
+var sugar *zap.SugaredLogger
+
+func init() {
+	var logger, _ = zap.NewProduction()
+	defer logger.Sync()
+	sugar = logger.Sugar()
+}
 
 func shellout(command string) (string, string, error) {
 	var stdout bytes.Buffer
@@ -41,11 +45,7 @@ func shellout(command string) (string, string, error) {
 	err := cmd.Run()
 
 	if err != nil {
-		// logger.Output(2, stderr.String())
-		// logger.Output(2, err.Error())
-		fmt.Println(stderr.String())
-		fmt.Println(err.Error())
-		// return
+		sugar.Error("stderr", stderr.String(), "error", err.Error())
 	}
 
 	return stdout.String(), stderr.String(), err
@@ -55,7 +55,6 @@ func main() {
 	fmt.Println("Hello world!")
 	fetchCertArg := "--fetch-cert"
 	out, _, _ := shellout(KubesealApp + " " + fetchCertArg)
-	// cmd := exec.Command(app, fetchCertArg)
 
 	fmt.Println(out)
 

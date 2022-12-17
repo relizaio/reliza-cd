@@ -19,12 +19,18 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"os/exec"
 )
 
 const ShellToUse = "sh"
 const HelmApp = "tools/helm"
 const KubesealApp = "tools/kubeseal"
+
+var (
+	logBuf bytes.Buffer
+	logger = log.New(&logBuf, "logger: ", log.Lshortfile)
+)
 
 func shellout(command string) (string, string, error) {
 	var stdout bytes.Buffer
@@ -33,31 +39,27 @@ func shellout(command string) (string, string, error) {
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
+
+	if err != nil {
+		// logger.Output(2, stderr.String())
+		// logger.Output(2, err.Error())
+		fmt.Println(stderr.String())
+		fmt.Println(err.Error())
+		// return
+	}
+
 	return stdout.String(), stderr.String(), err
 }
 
 func main() {
 	fmt.Println("Hello world!")
 	fetchCertArg := "--fetch-cert"
-	out, errout, err := shellout(KubesealApp + " " + fetchCertArg)
+	out, _, _ := shellout(KubesealApp + " " + fetchCertArg)
 	// cmd := exec.Command(app, fetchCertArg)
 
-	if err != nil {
-		fmt.Println(errout)
-		fmt.Println(err.Error())
-		return
-	}
-
 	fmt.Println(out)
 
-	out, errout, err = shellout(HelmApp + " list")
-
-	if err != nil {
-		fmt.Println(errout)
-		fmt.Println(err.Error())
-		return
-	}
-	fmt.Println(out)
+	// installSealedCertificates()
 }
 
 func initialize() {
@@ -66,6 +68,7 @@ func initialize() {
 
 func installSealedCertificates() {
 	// https://github.com/bitnami-labs/sealed-secrets#helm-chart
-	// helm repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets
+	shellout(HelmApp + " repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets")
+	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller sealed-secrets/sealed-secrets")
 
 }

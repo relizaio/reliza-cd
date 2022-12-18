@@ -18,7 +18,6 @@ package main
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 
 	"go.uber.org/zap"
@@ -52,17 +51,17 @@ func shellout(command string) (string, string, error) {
 }
 
 func main() {
-	fmt.Println("Hello world!")
-	fetchCertArg := "--fetch-cert"
-	out, _, _ := shellout(KubesealApp + " " + fetchCertArg)
+	sugar.Info("Starting Reliza CD")
 
-	fmt.Println(out)
-
-	// installSealedCertificates()
+	if !isSealedCertInstalled() {
+		installSealedCertificates()
+	}
 }
 
-func initialize() {
-
+func isSealedCertInstalled() bool {
+	fetchCertArg := "--fetch-cert"
+	out, _, _ := shellout(KubesealApp + " " + fetchCertArg)
+	return (out == "true")
 }
 
 func installSealedCertificates() {

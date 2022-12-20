@@ -65,8 +65,11 @@ func main() {
 			sealedCert = getSealedCert()
 			time.Sleep(3 * time.Second)
 		}
-
 	}
+
+	setSealedCertificateOnTheHub(sealedCert)
+
+	sugar.Info("Done Reliza CD")
 }
 
 func getSealedCert() string {
@@ -81,6 +84,6 @@ func installSealedCertificates() {
 	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller sealed-secrets/sealed-secrets")
 }
 
-func setSealedCertificateOnTheHub() {
-
+func setSealedCertificateOnTheHub(cert string) {
+	shellout(RelizaCliApp + " setsecretcert --cert " + cert)
 }

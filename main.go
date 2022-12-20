@@ -19,13 +19,17 @@ package main
 import (
 	"bytes"
 	"os/exec"
+	"time"
 
 	"go.uber.org/zap"
 )
 
-const ShellToUse = "sh"
-const HelmApp = "tools/helm"
-const KubesealApp = "tools/kubeseal"
+const (
+	ShellToUse   = "sh"
+	HelmApp      = "tools/helm"
+	KubesealApp  = "tools/kubeseal"
+	RelizaCliApp = "tools/reliza-cli"
+)
 
 var sugar *zap.SugaredLogger
 
@@ -53,20 +57,30 @@ func shellout(command string) (string, string, error) {
 func main() {
 	sugar.Info("Starting Reliza CD")
 
-	if !isSealedCertInstalled() {
+	sealedCert := getSealedCert()
+	if len(sealedCert) < 1 {
+		sugar.Info("Installing Bitnami Sealed Certificate")
 		installSealedCertificates()
+		for len(sealedCert) < 1 {
+			sealedCert = getSealedCert()
+			time.Sleep(3 * time.Second)
+		}
+
 	}
 }
 
-func isSealedCertInstalled() bool {
-	fetchCertArg := "--fetch-cert"
-	out, _, _ := shellout(KubesealApp + " " + fetchCertArg)
-	return (out == "true")
+func getSealedCert() string {
+	fetchCertArg := "--fetch-cert | base64 -w 0"
+	cert, _, _ := shellout(KubesealApp + " " + fetchCertArg)
+	return cert
 }
 
 func installSealedCertificates() {
 	// https://github.com/bitnami-labs/sealed-secrets#helm-chart
 	shellout(HelmApp + " repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets")
 	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller sealed-secrets/sealed-secrets")
+}
+
+func setSealedCertificateOnTheHub() {
 
 }

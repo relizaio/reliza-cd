@@ -59,7 +59,6 @@ func main() {
 
 	sealedCert := getSealedCert()
 	if len(sealedCert) < 1 {
-		sugar.Info("Installing Bitnami Sealed Certificate")
 		installSealedCertificates()
 		for len(sealedCert) < 1 {
 			sealedCert = getSealedCert()
@@ -79,11 +78,13 @@ func getSealedCert() string {
 }
 
 func installSealedCertificates() {
+	sugar.Info("Installing Bitnami Sealed Certificate")
 	// https://github.com/bitnami-labs/sealed-secrets#helm-chart
 	shellout(HelmApp + " repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets")
 	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller sealed-secrets/sealed-secrets")
 }
 
 func setSealedCertificateOnTheHub(cert string) {
+	sugar.Info("Setting Bitnami Sealed Certificate on Reliza Hub")
 	shellout(RelizaCliApp + " setsecretcert --cert " + cert)
 }

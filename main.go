@@ -19,8 +19,10 @@ package main
 import (
 	"bytes"
 	"os/exec"
+	"strings"
 	"time"
 
+	cdx "github.com/CycloneDX/cyclonedx-go"
 	"go.uber.org/zap"
 )
 
@@ -29,6 +31,7 @@ const (
 	HelmApp      = "tools/helm"
 	KubesealApp  = "tools/kubeseal"
 	RelizaCliApp = "tools/reliza-cli"
+	HelmMimeType = "application/vnd.cncf.helm.config.v1+json"
 )
 
 var sugar *zap.SugaredLogger
@@ -70,7 +73,8 @@ func main() {
 	setSealedCertificateOnTheHub(sealedCert)
 
 	instManifest := getInstanceCycloneDX()
-	sugar.Info(instManifest)
+	rlzDeployments := parseInstanceCycloneDXIntoDeployments(instManifest)
+	sugar.Info(rlzDeployments)
 
 	sugar.Info("Done Reliza CD")
 }
@@ -96,4 +100,44 @@ func setSealedCertificateOnTheHub(cert string) {
 func getInstanceCycloneDX() string {
 	instManifest, _, _ := shellout(RelizaCliApp + " exportinst")
 	return instManifest
+}
+
+func parseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDeployment {
+	bom := new(cdx.BOM)
+	manifestReader := strings.NewReader(cyclonedxManifest)
+	decoder := cdx.NewBOMDecoder(manifestReader, cdx.BOMFileFormatJSON)
+	if err := decoder.Decode(bom); err != nil {
+		sugar.Error(err)
+	}
+
+	var rlzDeployments []RelizaDeployment
+
+	for _, comp := range *bom.Components {
+		if comp.MIMEType == HelmMimeType {
+			var rd RelizaDeployment
+			namespaceBundle := strings.Split(comp.Group, "---")
+			rd.Namespace = namespaceBundle[0]
+			rd.Bundle = namespaceBundle[1]
+			rd.ArtUri = comp.Name
+			rd.ArtVersion = comp.Version
+			hashes := *comp.Hashes
+			if len(hashes) > 0 {
+				rd.ArtHash = hashes[0]
+				rlzDeployments = append(rlzDeployments, rd)
+			} else {
+				sugar.Error("Missing Helm artifact hash for = " + rd.ArtUri + ", skipping")
+			}
+		}
+	}
+
+	return rlzDeployments
+
+}
+
+type RelizaDeployment struct {
+	Namespace  string
+	Bundle     string
+	ArtUri     string
+	ArtVersion string
+	ArtHash    cdx.Hash
 }

@@ -66,7 +66,11 @@ func main() {
 		}
 	}
 
+	// TODO only set if changed / not set previously
 	setSealedCertificateOnTheHub(sealedCert)
+
+	instManifest := getInstanceCycloneDX()
+	sugar.Info(instManifest)
 
 	sugar.Info("Done Reliza CD")
 }
@@ -87,4 +91,9 @@ func installSealedCertificates() {
 func setSealedCertificateOnTheHub(cert string) {
 	sugar.Info("Setting Bitnami Sealed Certificate on Reliza Hub")
 	shellout(RelizaCliApp + " setsecretcert --cert " + cert)
+}
+
+func getInstanceCycloneDX() string {
+	instManifest, _, _ := shellout(RelizaCliApp + " exportinst")
+	return instManifest
 }

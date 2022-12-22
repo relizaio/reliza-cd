@@ -94,7 +94,7 @@ func installSealedCertificates() {
 
 func setSealedCertificateOnTheHub(cert string) {
 	sugar.Info("Setting Bitnami Sealed Certificate on Reliza Hub")
-	shellout(RelizaCliApp + " setsecretcert --cert " + cert)
+	shellout(RelizaCliApp + " cd setsecretcert --cert " + cert)
 }
 
 func getInstanceCycloneDX() string {

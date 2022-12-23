@@ -14,10 +14,13 @@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTH
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 */
-package main
+package controller
 
 import (
-	"github.com/relizaio/reliza-cd/controller"
+	"os"
+	"time"
+
+	"github.com/relizaio/reliza-cd/cli"
 	"go.uber.org/zap"
 )
 
@@ -29,10 +32,34 @@ func init() {
 	sugar = logger.Sugar()
 }
 
-func main() {
-	sugar.Info("Starting Reliza CD")
+func Loop() {
+	sealedCert := cli.GetSealedCert()
+	if len(sealedCert) < 1 {
+		cli.InstallSealedCertificates()
+		for len(sealedCert) < 1 {
+			sealedCert = cli.GetSealedCert()
+			time.Sleep(3 * time.Second)
+		}
+	}
 
-	controller.Loop()
+	// TODO only set if changed / not set previously
+	cli.SetSealedCertificateOnTheHub(sealedCert)
 
-	sugar.Info("Done Reliza CD")
+	instManifest := cli.GetInstanceCycloneDX()
+	rlzDeployments := cli.ParseInstanceCycloneDXIntoDeployments(instManifest)
+
+	for _, rd := range rlzDeployments {
+		digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
+		cli.GetProjectAuthByArtifactDigest(digest)
+		secretFile, err := os.Create("createdSecret.yaml")
+		if err != nil {
+			sugar.Panic(err)
+		}
+		cli.ProduceSecretYaml(secretFile)
+
+		// sugar.Info(secretYaml)
+		// shellout("echo \"" + secretYaml + "\" > createdSecret.yaml")
+	}
+
+	sugar.Info(rlzDeployments)
 }

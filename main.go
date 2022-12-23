@@ -18,8 +18,12 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
+	"io"
+	"os"
 	"os/exec"
 	"strings"
+	"text/template"
 	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
@@ -78,6 +82,14 @@ func main() {
 	for _, rd := range rlzDeployments {
 		digest := extractRlzDigestFromCdxDigest(rd.ArtHash)
 		getProjectAuthByArtifactDigest(digest)
+		secretFile, err := os.Create("createdSecret.yaml")
+		if err != nil {
+			sugar.Panic(err)
+		}
+		produceSecretYaml(secretFile)
+
+		// sugar.Info(secretYaml)
+		// shellout("echo \"" + secretYaml + "\" > createdSecret.yaml")
 	}
 
 	sugar.Info(rlzDeployments)
@@ -148,7 +160,58 @@ func parseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 
 func getProjectAuthByArtifactDigest(artDigest string) {
 	authResp, _, _ := shellout(RelizaCliApp + " cd artsecrets --artdigest " + artDigest)
-	sugar.Info(authResp)
+	var projectAuth map[string]ProjectAuth
+	json.Unmarshal([]byte(authResp), &projectAuth)
+	sugar.Info(projectAuth["artifactDownloadSecrets"])
+}
+
+func produceSecretYaml(w io.Writer) {
+	secretTmpl :=
+		`apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: {{.Name}}
+  namespace: {{.Namespace}}
+spec:
+  encryptedData:
+    username: {{.Username}}
+    password: {{.Password}}
+  template:
+    data:
+      url: {{.Url}}
+      name: {{.Name}}
+      type: helm
+    metadata:
+      labels:
+        reliza.io/type: cdresource
+        argocd.argoproj.io/secret-type: repository
+      annotations:
+        reliza.io/type: cdresource`
+
+	var secTmplRes SecretTemplateResolver
+	secTmplRes.Name = "TestName"
+	secTmplRes.Namespace = "TestNamespace"
+	secTmplRes.Username = "TestUsername"
+	secTmplRes.Password = "TestPass"
+	secTmplRes.Url = "TestUrl"
+
+	tmpl, err := template.New("test").Parse(secretTmpl)
+	if err != nil {
+		panic(err)
+	}
+
+	err = tmpl.Execute(w, secTmplRes)
+	if err != nil {
+		panic(err)
+	}
+}
+
+type SecretTemplateResolver struct {
+	Name      string
+	Namespace string
+	Username  string
+	Password  string
+	Url       string
 }
 
 type RelizaDeployment struct {
@@ -157,4 +220,10 @@ type RelizaDeployment struct {
 	ArtUri     string
 	ArtVersion string
 	ArtHash    cdx.Hash
+}
+
+type ProjectAuth struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+	Type     string `json:"type"`
 }

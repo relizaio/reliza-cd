@@ -74,9 +74,21 @@ func main() {
 
 	instManifest := getInstanceCycloneDX()
 	rlzDeployments := parseInstanceCycloneDXIntoDeployments(instManifest)
+
+	for _, rd := range rlzDeployments {
+		digest := extractRlzDigestFromCdxDigest(rd.ArtHash)
+		getProjectAuthByArtifactDigest(digest)
+	}
+
 	sugar.Info(rlzDeployments)
 
 	sugar.Info("Done Reliza CD")
+}
+
+func extractRlzDigestFromCdxDigest(cdxHash cdx.Hash) string {
+	algstr := strings.ToLower(string(cdxHash.Algorithm))
+	algstr = strings.Replace(algstr, "-", "", -1)
+	return algstr + ":" + cdxHash.Value
 }
 
 func getSealedCert() string {
@@ -132,6 +144,11 @@ func parseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 
 	return rlzDeployments
 
+}
+
+func getProjectAuthByArtifactDigest(artDigest string) {
+	authResp, _, _ := shellout(RelizaCliApp + " cd artsecrets --artdigest " + artDigest)
+	sugar.Info(authResp)
 }
 
 type RelizaDeployment struct {

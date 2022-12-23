@@ -101,6 +101,7 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 	for _, comp := range *bom.Components {
 		if comp.MIMEType == HelmMimeType {
 			var rd RelizaDeployment
+			rd.Name = strings.ToLower(comp.Group)
 			namespaceBundle := strings.Split(comp.Group, "---")
 			rd.Namespace = namespaceBundle[0]
 			rd.Bundle = namespaceBundle[1]
@@ -120,14 +121,14 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 
 }
 
-func GetProjectAuthByArtifactDigest(artDigest string) {
+func GetProjectAuthByArtifactDigest(artDigest string) ProjectAuth {
 	authResp, _, _ := shellout(RelizaCliApp + " cd artsecrets --artdigest " + artDigest)
 	var projectAuth map[string]ProjectAuth
 	json.Unmarshal([]byte(authResp), &projectAuth)
-	sugar.Info(projectAuth["artifactDownloadSecrets"])
+	return projectAuth["artifactDownloadSecrets"]
 }
 
-func ProduceSecretYaml(w io.Writer) {
+func ProduceSecretYaml(w io.Writer, rd RelizaDeployment, projAuth ProjectAuth, namespace string) {
 	secretTmpl :=
 		`apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
@@ -151,11 +152,11 @@ spec:
         reliza.io/type: cdresource`
 
 	var secTmplRes SecretTemplateResolver
-	secTmplRes.Name = "TestName"
-	secTmplRes.Namespace = "TestNamespace"
-	secTmplRes.Username = "TestUsername"
-	secTmplRes.Password = "TestPass"
-	secTmplRes.Url = "TestUrl"
+	secTmplRes.Name = rd.Name
+	secTmplRes.Namespace = namespace
+	secTmplRes.Username = projAuth.Login
+	secTmplRes.Password = projAuth.Password
+	secTmplRes.Url = rd.ArtUri
 
 	tmpl, err := template.New("test").Parse(secretTmpl)
 	if err != nil {
@@ -177,6 +178,7 @@ type SecretTemplateResolver struct {
 }
 
 type RelizaDeployment struct {
+	Name       string
 	Namespace  string
 	Bundle     string
 	ArtUri     string

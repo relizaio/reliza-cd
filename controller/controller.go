@@ -50,15 +50,13 @@ func Loop() {
 
 	for _, rd := range rlzDeployments {
 		digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
-		cli.GetProjectAuthByArtifactDigest(digest)
-		secretFile, err := os.Create("createdSecret.yaml")
+		projAuth := cli.GetProjectAuthByArtifactDigest(digest)
+		os.MkdirAll("workspace/"+rd.Name, 0700)
+		secretFile, err := os.Create("workspace/" + rd.Name + "/reposecret.yaml")
 		if err != nil {
 			sugar.Panic(err)
 		}
-		cli.ProduceSecretYaml(secretFile)
-
-		// sugar.Info(secretYaml)
-		// shellout("echo \"" + secretYaml + "\" > createdSecret.yaml")
+		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 	}
 
 	sugar.Info(rlzDeployments)

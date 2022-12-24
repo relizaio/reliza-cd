@@ -30,7 +30,6 @@ import (
 
 const (
 	ShellToUse   = "sh"
-	HelmApp      = "tools/helm"
 	KubesealApp  = "tools/kubeseal"
 	RelizaCliApp = "tools/reliza-cli"
 	HelmMimeType = "application/vnd.cncf.helm.config.v1+json"
@@ -67,13 +66,6 @@ func SetSealedCertificateOnTheHub(cert string) {
 func GetInstanceCycloneDX() string {
 	instManifest, _, _ := shellout(RelizaCliApp + " exportinst")
 	return instManifest
-}
-
-func InstallSealedCertificates() {
-	sugar.Info("Installing Bitnami Sealed Certificate")
-	// https://github.com/bitnami-labs/sealed-secrets#helm-chart
-	shellout(HelmApp + " repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets")
-	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller sealed-secrets/sealed-secrets")
 }
 
 func ExtractRlzDigestFromCdxDigest(cdxHash cdx.Hash) string {

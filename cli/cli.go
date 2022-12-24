@@ -120,7 +120,7 @@ func GetProjectAuthByArtifactDigest(artDigest string) ProjectAuth {
 	return projectAuth["artifactDownloadSecrets"]
 }
 
-func ProduceSecretYaml(w io.Writer, rd RelizaDeployment, projAuth ProjectAuth, namespace string) {
+func ProduceSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string) {
 	secretTmpl :=
 		`apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret

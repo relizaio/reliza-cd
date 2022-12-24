@@ -50,19 +50,23 @@ func Loop() {
 	rlzDeployments := cli.ParseInstanceCycloneDXIntoDeployments(instManifest)
 
 	for _, rd := range rlzDeployments {
-		digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
-		projAuth := cli.GetProjectAuthByArtifactDigest(digest)
-		dirName := strings.ToLower(rd.Name)
-		os.MkdirAll("workspace/"+dirName, 0700)
-
-		if projAuth.Type != "NOCREDS" {
-			secretFile, err := os.Create("workspace/" + dirName + "/reposecret.yaml")
-			if err != nil {
-				sugar.Panic(err)
-			}
-			cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
-		}
+		processSingleDeployment(&rd)
 	}
 
 	sugar.Info(rlzDeployments)
+}
+
+func processSingleDeployment(rd *cli.RelizaDeployment) {
+	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
+	projAuth := cli.GetProjectAuthByArtifactDigest(digest)
+	dirName := strings.ToLower(rd.Name)
+	os.MkdirAll("workspace/"+dirName, 0700)
+
+	if projAuth.Type != "NOCREDS" {
+		secretFile, err := os.Create("workspace/" + dirName + "/reposecret.yaml")
+		if err != nil {
+			sugar.Panic(err)
+		}
+		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
+	}
 }

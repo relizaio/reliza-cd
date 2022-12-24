@@ -54,11 +54,14 @@ func Loop() {
 		projAuth := cli.GetProjectAuthByArtifactDigest(digest)
 		dirName := strings.ToLower(rd.Name)
 		os.MkdirAll("workspace/"+dirName, 0700)
-		secretFile, err := os.Create("workspace/" + dirName + "/reposecret.yaml")
-		if err != nil {
-			sugar.Panic(err)
+
+		if projAuth.Type != "NOCREDS" {
+			secretFile, err := os.Create("workspace/" + dirName + "/reposecret.yaml")
+			if err != nil {
+				sugar.Panic(err)
+			}
+			cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 		}
-		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 	}
 
 	sugar.Info(rlzDeployments)

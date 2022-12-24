@@ -18,6 +18,7 @@ package controller
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/relizaio/reliza-cd/cli"
@@ -51,8 +52,9 @@ func Loop() {
 	for _, rd := range rlzDeployments {
 		digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
 		projAuth := cli.GetProjectAuthByArtifactDigest(digest)
-		os.MkdirAll("workspace/"+rd.Name, 0700)
-		secretFile, err := os.Create("workspace/" + rd.Name + "/reposecret.yaml")
+		dirName := strings.ToLower(rd.Name)
+		os.MkdirAll("workspace/"+dirName, 0700)
+		secretFile, err := os.Create("workspace/" + dirName + "/reposecret.yaml")
 		if err != nil {
 			sugar.Panic(err)
 		}

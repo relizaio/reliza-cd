@@ -19,10 +19,10 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"html/template"
 	"io"
 	"os/exec"
 	"strings"
+	"text/template"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"go.uber.org/zap"
@@ -135,6 +135,8 @@ kind: SealedSecret
 metadata:
   name: {{.Name}}
   namespace: {{.Namespace}}
+  annotations:
+    sealedsecrets.bitnami.com/namespace-wide: "true"
 spec:
   encryptedData:
     username: {{.Username}}
@@ -147,9 +149,7 @@ spec:
     metadata:
       labels:
         reliza.io/type: cdresource
-        argocd.argoproj.io/secret-type: repository
-      annotations:
-        reliza.io/type: cdresource`
+        argocd.argoproj.io/secret-type: repository`
 
 	var secTmplRes SecretTemplateResolver
 	secTmplRes.Name = rd.Name
@@ -158,7 +158,7 @@ spec:
 	secTmplRes.Password = projAuth.Password
 	secTmplRes.Url = rd.ArtUri
 
-	tmpl, err := template.New("test").Parse(secretTmpl)
+	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
 	if err != nil {
 		panic(err)
 	}

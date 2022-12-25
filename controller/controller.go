@@ -73,5 +73,6 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		resolvedPa := cli.ResolveHelmAuthSecret(dirName)
 		chartPath := "workspace/" + dirName + "/"
 		cli.DownloadHelmChart(chartPath, rd, &resolvedPa)
+		cli.MergeHelmValues(chartPath, rd)
 	}
 }

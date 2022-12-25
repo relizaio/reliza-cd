@@ -90,6 +90,18 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 
 	var rlzDeployments []RelizaDeployment
 
+	appConfigMap := make(map[string]string)
+
+	for _, comp := range *bom.Components {
+		if comp.Type == "application" && len(*comp.Properties) > 0 {
+			for _, prop := range *comp.Properties {
+				if prop.Name == "CONFIGURATION" {
+					appConfigMap[strings.ToLower(comp.Group)] = prop.Value
+				}
+			}
+		}
+	}
+
 	for _, comp := range *bom.Components {
 		if comp.MIMEType == HelmMimeType {
 			var rd RelizaDeployment
@@ -99,6 +111,11 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 			rd.Bundle = namespaceBundle[1]
 			rd.ArtUri = comp.Name
 			rd.ArtVersion = comp.Version
+			configFile := appConfigMap[rd.Name]
+			if len(configFile) < 1 {
+				configFile = "values.yaml"
+			}
+			rd.ConfigFile = configFile
 			hashes := *comp.Hashes
 			if len(hashes) > 0 {
 				rd.ArtHash = hashes[0]
@@ -176,6 +193,7 @@ type RelizaDeployment struct {
 	ArtUri     string
 	ArtVersion string
 	ArtHash    cdx.Hash
+	ConfigFile string
 }
 
 type ProjectAuth struct {

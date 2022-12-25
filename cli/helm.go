@@ -45,10 +45,17 @@ func KubectlApply(path string) {
 	shellout(KubectlApp + " apply -f " + path)
 }
 
+func cleanupHelmChart(helmChartPath string) {
+	shellout("rm -rf " + helmChartPath + "/")
+	shellout("rm -rf " + helmChartPath + "*.tgz")
+}
+
 func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
 	helmChartSplit := strings.Split(rd.ArtUri, "/")
 	helmChartName := helmChartSplit[len(helmChartSplit)-1]
 	helmChartUri := strings.Replace(rd.ArtUri, "/"+helmChartName, "", -1)
+
+	cleanupHelmChart(path + helmChartName)
 
 	// TODO flag for OCI from RH
 	useOci := false
@@ -62,11 +69,20 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
 		ociUri := strings.Replace(rd.ArtUri, "https://", "oci://", -1)
 		ociUri = strings.Replace(ociUri, "http://", "oci://", -1)
 		shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
-		pullCmd := HelmApp + " pull " + ociUri + " --username " + pa.Login + " --password " + pa.Password + " --untar --version " + rd.ArtVersion + " -d " + path
+		pullCmd := HelmApp + " pull " + ociUri + " --username " + pa.Login + " --password " + pa.Password + " --version " + rd.ArtVersion + " -d " + path
 		shellout(pullCmd)
 	} else {
 		shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
 		shellout(HelmApp + " repo update")
-		shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --untar --version " + rd.ArtVersion + " -d " + path)
+		shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
 	}
+
+	shellout("tar -xzvf " + path + "*.tgz -C " + path)
+}
+
+func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
+	helmChartSplit := strings.Split(rd.ArtUri, "/")
+	helmChartName := helmChartSplit[len(helmChartSplit)-1]
+	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + " -f " + rd.ConfigFile + " --outfile " + groupPath + "work-values.yaml"
+	shellout(helmValuesCmd)
 }

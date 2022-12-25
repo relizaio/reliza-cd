@@ -45,14 +45,28 @@ func KubectlApply(path string) {
 	shellout(KubectlApp + " apply -f " + path)
 }
 
-func downloadChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
+func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
+	helmChartSplit := strings.Split(rd.ArtUri, "/")
+	helmChartName := helmChartSplit[len(helmChartSplit)-1]
+	helmChartUri := strings.Replace(rd.ArtUri, "/"+helmChartName, "", -1)
+
 	// TODO flag for OCI from RH
 	useOci := false
-	if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") {
+	if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") || strings.Contains(rd.ArtUri, ".pkg.dev") {
 		useOci = true
 	}
 	if useOci {
-
+		// TODO: test oci
+		// TODO: special case for ECR
+		sugar.Info(helmChartUri)
+		ociUri := strings.Replace(rd.ArtUri, "https://", "oci://", -1)
+		ociUri = strings.Replace(ociUri, "http://", "oci://", -1)
+		shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+		pullCmd := HelmApp + " pull " + ociUri + " --username " + pa.Login + " --password " + pa.Password + " --version " + rd.ArtVersion + " -d " + path
+		shellout(pullCmd)
+	} else {
+		shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+		shellout(HelmApp + " repo update")
+		shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
 	}
-
 }

@@ -71,6 +71,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 		cli.KubectlApply(secretPath)
 		resolvedPa := cli.ResolveHelmAuthSecret(dirName)
-		sugar.Info(resolvedPa)
+		chartPath := "workspace/" + dirName + "/"
+		cli.DownloadHelmChart(chartPath, rd, &resolvedPa)
 	}
 }

@@ -63,10 +63,14 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	os.MkdirAll("workspace/"+dirName, 0700)
 
 	if projAuth.Type != "NOCREDS" {
-		secretFile, err := os.Create("workspace/" + dirName + "/reposecret.yaml")
+		secretPath := "workspace/" + dirName + "/reposecret.yaml"
+		secretFile, err := os.Create(secretPath)
 		if err != nil {
 			sugar.Panic(err)
 		}
 		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
+		cli.KubectlApply(secretPath)
+		resolvedPa := cli.ResolveHelmAuthSecret(dirName)
+		sugar.Info(resolvedPa)
 	}
 }

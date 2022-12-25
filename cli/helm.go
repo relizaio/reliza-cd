@@ -16,8 +16,12 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 */
 package cli
 
+import "strings"
+
 const (
-	HelmApp = "tools/helm"
+	HelmApp     = "tools/helm"
+	KubectlApp  = "tools/kubectl"
+	MyNamespace = "argocd" // TODO make configurable
 )
 
 func InstallSealedCertificates() {
@@ -25,4 +29,30 @@ func InstallSealedCertificates() {
 	// https://github.com/bitnami-labs/sealed-secrets#helm-chart
 	shellout(HelmApp + " repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets")
 	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller sealed-secrets/sealed-secrets")
+}
+
+func ResolveHelmAuthSecret(secretName string) ProjectAuth {
+	var pa ProjectAuth
+	username, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.username} -n" + MyNamespace + " | base64 -d")
+	password, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.password} -n" + MyNamespace + " | base64 -d")
+	pa.Type = "CREDS"
+	pa.Login = username
+	pa.Password = password
+	return pa
+}
+
+func KubectlApply(path string) {
+	shellout(KubectlApp + " apply -f " + path)
+}
+
+func downloadChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
+	// TODO flag for OCI from RH
+	useOci := false
+	if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") {
+		useOci = true
+	}
+	if useOci {
+
+	}
+
 }

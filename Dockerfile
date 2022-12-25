@@ -5,3 +5,5 @@ RUN cd /tmp && sha256sum -c kubeseal_0.18.0_sha256
 RUN cd /tmp && tar -xzvf kubeseal-0.18.0-linux-amd64.tar.gz
 
 ADD https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz /tmp/
+
+ADD https://storage.googleapis.com/kubernetes-release/release/v1.23.14/bin/linux/amd64/kubectl /tmp/

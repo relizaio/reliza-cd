@@ -62,11 +62,11 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
 		ociUri := strings.Replace(rd.ArtUri, "https://", "oci://", -1)
 		ociUri = strings.Replace(ociUri, "http://", "oci://", -1)
 		shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
-		pullCmd := HelmApp + " pull " + ociUri + " --username " + pa.Login + " --password " + pa.Password + " --version " + rd.ArtVersion + " -d " + path
+		pullCmd := HelmApp + " pull " + ociUri + " --username " + pa.Login + " --password " + pa.Password + " --untar --version " + rd.ArtVersion + " -d " + path
 		shellout(pullCmd)
 	} else {
 		shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
 		shellout(HelmApp + " repo update")
-		shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
+		shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --untar --version " + rd.ArtVersion + " -d " + path)
 	}
 }

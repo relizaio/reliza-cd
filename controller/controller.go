@@ -75,5 +75,6 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		cli.ResolvePreviousDiffFile(chartPath)
 		cli.DownloadHelmChart(chartPath, rd, &resolvedPa)
 		cli.MergeHelmValues(chartPath, rd)
+		cli.ReplaceTags(chartPath, rd.Namespace)
 	}
 }

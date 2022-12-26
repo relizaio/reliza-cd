@@ -98,3 +98,8 @@ func ResolvePreviousDiffFile(groupPath string) {
 	shellout("cp " + groupPath + ValuesDiff + " " + groupPath + ValuesDiffPrev +
 		" || echo 'no prev values file present yet' > " + groupPath + ValuesDiffPrev)
 }
+
+func ReplaceTags(groupPath string, namespace string) {
+	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + ValuesDiff + " --fordiff=true --resolveprops=true --namespace " + namespace
+	shellout(replaceTagsCmd)
+}

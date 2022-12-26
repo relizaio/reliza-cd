@@ -78,5 +78,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		cli.ReplaceTags(groupPath, rd.Namespace)
 		isDiff := cli.IsValuesDiff(groupPath)
 		sugar.Info("Values Diff? ", isDiff)
+		isFirstInstallDone := cli.IsFirstInstallDone(rd)
+		sugar.Info("Is first install done? ", isFirstInstallDone)
 	}
 }

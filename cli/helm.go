@@ -18,6 +18,7 @@ package cli
 
 import (
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -57,8 +58,7 @@ func cleanupHelmChart(helmChartPath string) {
 }
 
 func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
-	helmChartSplit := strings.Split(rd.ArtUri, "/")
-	helmChartName := helmChartSplit[len(helmChartSplit)-1]
+	helmChartName := getChartNameFromDeployment(rd)
 	helmChartUri := strings.Replace(rd.ArtUri, "/"+helmChartName, "", -1)
 
 	cleanupHelmChart(path + helmChartName)
@@ -87,8 +87,7 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
 }
 
 func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
-	helmChartSplit := strings.Split(rd.ArtUri, "/")
-	helmChartName := helmChartSplit[len(helmChartSplit)-1]
+	helmChartName := getChartNameFromDeployment(rd)
 	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + " -f " + rd.ConfigFile + " --outfile " + groupPath + WorkValues
 	shellout(helmValuesCmd)
 }
@@ -124,4 +123,23 @@ func IsValuesDiff(groupPath string) bool {
 		}
 	}
 	return isDiff
+}
+
+func IsFirstInstallDone(rd *RelizaDeployment) bool {
+	isFirstInstallDone := false
+	helmChartName := getChartNameFromDeployment(rd)
+	helmListOut, _, _ := shellout(HelmApp + " list -f \"^" + helmChartName + "$\" -n " + rd.Namespace + " | wc -l")
+	helmListOut = strings.Replace(helmListOut, "\n", "", -1)
+	helmListOutInt, err := strconv.Atoi(helmListOut)
+	if err != nil {
+		sugar.Error(err)
+	} else if helmListOutInt > 1 {
+		isFirstInstallDone = true
+	}
+	return isFirstInstallDone
+}
+
+func getChartNameFromDeployment(rd *RelizaDeployment) string {
+	helmChartSplit := strings.Split(rd.ArtUri, "/")
+	return helmChartSplit[len(helmChartSplit)-1]
 }

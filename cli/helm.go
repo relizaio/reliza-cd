@@ -26,7 +26,8 @@ const (
 	KubectlApp     = "tools/kubectl"
 	MyNamespace    = "argocd" // TODO make configurable
 	WorkValues     = "work-values.yaml"
-	WorkValuesPrev = "work-values-prev.yaml"
+	ValuesDiff     = "values-diff.yaml"
+	ValuesDiffPrev = "values-diff-prev.yaml"
 )
 
 func InstallSealedCertificates() {
@@ -93,7 +94,7 @@ func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
 }
 
 func ResolvePreviousDiffFile(groupPath string) {
-	os.RemoveAll(groupPath + WorkValuesPrev)
-	shellout("cp " + groupPath + WorkValues + " " + groupPath + WorkValuesPrev +
-		" || echo 'no prev values file present yet' > " + groupPath + WorkValuesPrev)
+	os.RemoveAll(groupPath + ValuesDiffPrev)
+	shellout("cp " + groupPath + ValuesDiff + " " + groupPath + ValuesDiffPrev +
+		" || echo 'no prev values file present yet' > " + groupPath + ValuesDiffPrev)
 }

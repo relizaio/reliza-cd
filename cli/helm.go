@@ -140,6 +140,17 @@ func IsFirstInstallDone(rd *RelizaDeployment) bool {
 	return isFirstInstallDone
 }
 
+func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) {
+	if len(rd.AppVersion) > 0 {
+		helmChartName := getChartNameFromDeployment(rd)
+		shellout("sed -i \"s/^appVersion:.*$/appVersion: " + rd.AppVersion + "/\" " + groupPath + helmChartName + "/Chart.yaml")
+	}
+}
+
+func installHelmChart(groupPath string, rd *RelizaDeployment) {
+
+}
+
 func recordHelmChartVersion(groupPath string, rd *RelizaDeployment) {
 	shellout("echo " + rd.ArtVersion + " > " + groupPath + LastVersionFile)
 }

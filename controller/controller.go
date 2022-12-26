@@ -80,5 +80,6 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		sugar.Info("Values Diff? ", isDiff)
 		isFirstInstallDone := cli.IsFirstInstallDone(rd)
 		sugar.Info("Is first install done? ", isFirstInstallDone)
+		cli.SetHelmChartAppVersion(groupPath, rd)
 	}
 }

@@ -90,15 +90,20 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 
 	var rlzDeployments []RelizaDeployment
 
-	appConfigMap := make(map[string]string)
+	appConfigMap := make(map[string]appConfig)
 
 	for _, comp := range *bom.Components {
-		if comp.Type == "application" && len(*comp.Properties) > 0 {
-			for _, prop := range *comp.Properties {
-				if prop.Name == "CONFIGURATION" {
-					appConfigMap[strings.ToLower(comp.Group)] = prop.Value
+		if comp.Type == "application" {
+			var appConfig appConfig
+			appConfig.AppVersion = comp.Version
+			if len(*comp.Properties) > 0 {
+				for _, prop := range *comp.Properties {
+					if prop.Name == "CONFIGURATION" {
+						appConfig.ValuesFile = prop.Value
+					}
 				}
 			}
+			appConfigMap[strings.ToLower(comp.Group)] = appConfig
 		}
 	}
 
@@ -111,11 +116,17 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 			rd.Bundle = namespaceBundle[1]
 			rd.ArtUri = comp.Name
 			rd.ArtVersion = comp.Version
-			configFile := appConfigMap[rd.Name]
-			if len(configFile) < 1 {
-				configFile = "values.yaml"
+			appConfig := appConfigMap[rd.Name]
+			configFile := "values.yaml"
+			if len(appConfig.ValuesFile) > 0 {
+				configFile = appConfig.ValuesFile
 			}
 			rd.ConfigFile = configFile
+			appVersion := ""
+			if len(appConfig.AppVersion) > 0 {
+				appVersion = appConfig.AppVersion
+			}
+			rd.AppVersion = appVersion
 			hashes := *comp.Hashes
 			if len(hashes) > 0 {
 				rd.ArtHash = hashes[0]
@@ -194,10 +205,16 @@ type RelizaDeployment struct {
 	ArtVersion string
 	ArtHash    cdx.Hash
 	ConfigFile string
+	AppVersion string
 }
 
 type ProjectAuth struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 	Type     string `json:"type"`
+}
+
+type appConfig struct {
+	ValuesFile string
+	AppVersion string
 }

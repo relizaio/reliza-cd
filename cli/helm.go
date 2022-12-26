@@ -23,12 +23,13 @@ import (
 )
 
 const (
-	HelmApp        = "tools/helm"
-	KubectlApp     = "tools/kubectl"
-	MyNamespace    = "argocd" // TODO make configurable
-	WorkValues     = "work-values.yaml"
-	ValuesDiff     = "values-diff.yaml"
-	ValuesDiffPrev = "values-diff-prev.yaml"
+	HelmApp         = "tools/helm"
+	KubectlApp      = "tools/kubectl"
+	MyNamespace     = "argocd" // TODO make configurable
+	WorkValues      = "work-values.yaml"
+	ValuesDiff      = "values-diff.yaml"
+	ValuesDiffPrev  = "values-diff-prev.yaml"
+	LastVersionFile = "last_version"
 )
 
 func InstallSealedCertificates() {
@@ -137,6 +138,25 @@ func IsFirstInstallDone(rd *RelizaDeployment) bool {
 		isFirstInstallDone = true
 	}
 	return isFirstInstallDone
+}
+
+func recordHelmChartVersion(groupPath string, rd *RelizaDeployment) {
+	shellout("echo " + rd.ArtVersion + " > " + groupPath + LastVersionFile)
+}
+
+func StreamHelmChartsMetadataToHub(nsGroupPaths *[]string, namespace string) {
+	images := ""
+	for _, groupPath := range *nsGroupPaths {
+		images += " " + getHelmChartDigest(groupPath)
+	}
+	if len(images) > 1 {
+		shellout(RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + namespace + " --sender helmsender" + namespace)
+	}
+}
+
+func getHelmChartDigest(groupPath string) string {
+	digest, _, _ := shellout("sha256sum " + groupPath + "*.tgz | cut -f 1 -d ' '")
+	return "sha256:" + digest
 }
 
 func getChartNameFromDeployment(rd *RelizaDeployment) string {

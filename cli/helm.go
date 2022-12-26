@@ -16,12 +16,17 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 */
 package cli
 
-import "strings"
+import (
+	"os"
+	"strings"
+)
 
 const (
-	HelmApp     = "tools/helm"
-	KubectlApp  = "tools/kubectl"
-	MyNamespace = "argocd" // TODO make configurable
+	HelmApp        = "tools/helm"
+	KubectlApp     = "tools/kubectl"
+	MyNamespace    = "argocd" // TODO make configurable
+	WorkValues     = "work-values.yaml"
+	WorkValuesPrev = "work-values-prev.yaml"
 )
 
 func InstallSealedCertificates() {
@@ -83,6 +88,12 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
 func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
 	helmChartSplit := strings.Split(rd.ArtUri, "/")
 	helmChartName := helmChartSplit[len(helmChartSplit)-1]
-	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + " -f " + rd.ConfigFile + " --outfile " + groupPath + "work-values.yaml"
+	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + " -f " + rd.ConfigFile + " --outfile " + groupPath + WorkValues
 	shellout(helmValuesCmd)
+}
+
+func ResolvePreviousDiffFile(groupPath string) {
+	os.RemoveAll(groupPath + WorkValuesPrev)
+	shellout("cp " + groupPath + WorkValues + " " + groupPath + WorkValuesPrev +
+		" || echo 'no prev values file present yet' > " + groupPath + WorkValuesPrev)
 }

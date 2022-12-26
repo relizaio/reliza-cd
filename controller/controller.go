@@ -72,6 +72,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		cli.KubectlApply(secretPath)
 		resolvedPa := cli.ResolveHelmAuthSecret(dirName)
 		chartPath := "workspace/" + dirName + "/"
+		cli.ResolvePreviousDiffFile(chartPath)
 		cli.DownloadHelmChart(chartPath, rd, &resolvedPa)
 		cli.MergeHelmValues(chartPath, rd)
 	}

@@ -52,7 +52,7 @@ func shellout(command string) (string, string, error) {
 	err := cmd.Run()
 
 	if err != nil {
-		sugar.Error("stderr", stderr.String(), "error", err.Error())
+		sugar.Error("stdout: ", stdout.String(), "stderr: ", stderr.String(), "error: ", err.Error())
 	}
 
 	return stdout.String(), stderr.String(), err

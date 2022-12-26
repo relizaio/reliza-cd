@@ -103,3 +103,25 @@ func ReplaceTags(groupPath string, namespace string) {
 	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + ValuesDiff + " --fordiff=true --resolveprops=true --namespace " + namespace
 	shellout(replaceTagsCmd)
 }
+
+func IsValuesDiff(groupPath string) bool {
+	isDiff := false
+	prevVal, err := os.ReadFile(groupPath + ValuesDiffPrev)
+	if err != nil && os.IsNotExist(err) {
+		isDiff = true
+	} else if err != nil {
+		sugar.Error(err)
+	}
+
+	if !isDiff {
+		newVal, err := os.ReadFile(groupPath + ValuesDiff)
+		if err != nil {
+			sugar.Error(err)
+		}
+
+		if 0 != strings.Compare(string(newVal), string(prevVal)) {
+			isDiff = true
+		}
+	}
+	return isDiff
+}

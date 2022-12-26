@@ -71,10 +71,12 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 		cli.KubectlApply(secretPath)
 		resolvedPa := cli.ResolveHelmAuthSecret(dirName)
-		chartPath := "workspace/" + dirName + "/"
-		cli.ResolvePreviousDiffFile(chartPath)
-		cli.DownloadHelmChart(chartPath, rd, &resolvedPa)
-		cli.MergeHelmValues(chartPath, rd)
-		cli.ReplaceTags(chartPath, rd.Namespace)
+		groupPath := "workspace/" + dirName + "/"
+		cli.ResolvePreviousDiffFile(groupPath)
+		cli.DownloadHelmChart(groupPath, rd, &resolvedPa)
+		cli.MergeHelmValues(groupPath, rd)
+		cli.ReplaceTags(groupPath, rd.Namespace)
+		isDiff := cli.IsValuesDiff(groupPath)
+		sugar.Info("Values Diff? ", isDiff)
 	}
 }

@@ -153,8 +153,9 @@ func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) {
 	}
 }
 
-func installHelmChart(groupPath string, rd *RelizaDeployment) {
-
+func InstallHelmChart(groupPath string, rd *RelizaDeployment) {
+	helmChartName := getChartNameFromDeployment(rd)
+	shellout(HelmApp + " upgrade --install " + helmChartName + " -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
 }
 
 func recordHelmChartVersion(groupPath string, rd *RelizaDeployment) {
@@ -179,4 +180,15 @@ func getHelmChartDigest(groupPath string) string {
 func getChartNameFromDeployment(rd *RelizaDeployment) string {
 	helmChartSplit := strings.Split(rd.ArtUri, "/")
 	return helmChartSplit[len(helmChartSplit)-1]
+}
+
+func CreateNamespaceIfMissing(namespace string) {
+	nsListOut, _, _ := shellout(KubectlApp + " get ns " + namespace + " | wc -l")
+	nsListOut = strings.Replace(nsListOut, "\n", "", -1)
+	nsListOutInt, err := strconv.Atoi(nsListOut)
+	if err != nil {
+		sugar.Error(err)
+	} else if nsListOutInt < 2 {
+		shellout(KubectlApp + " create ns " + namespace)
+	}
 }

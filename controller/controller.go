@@ -82,5 +82,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		sugar.Info("Is first install done? ", isFirstInstallDone)
 		cli.SetHelmChartAppVersion(groupPath, rd)
 		cli.ReplaceTagsForInstall(groupPath, rd.Namespace)
+		cli.CreateNamespaceIfMissing(rd.Namespace)
+		cli.InstallHelmChart(groupPath, rd)
 	}
 }

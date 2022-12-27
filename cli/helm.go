@@ -76,11 +76,18 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
 		sugar.Info(helmChartUri)
 		ociUri := strings.Replace(rd.ArtUri, "https://", "oci://", -1)
 		ociUri = strings.Replace(ociUri, "http://", "oci://", -1)
-		shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
-		pullCmd := HelmApp + " pull " + ociUri + " --username " + pa.Login + " --password " + pa.Password + " --version " + rd.ArtVersion + " -d " + path
-		shellout(pullCmd)
+		if pa.Type != "NOCREDS" {
+			shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+		} else {
+			shellout(HelmApp + " registry login " + helmChartUri)
+		}
+		shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
 	} else {
-		shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+		if pa.Type != "NOCREDS" {
+			shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+		} else {
+			shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri)
+		}
 		shellout(HelmApp + " repo update")
 		shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
 	}
@@ -160,6 +167,12 @@ func InstallHelmChart(groupPath string, rd *RelizaDeployment) {
 
 func recordHelmChartVersion(groupPath string, rd *RelizaDeployment) {
 	shellout("echo " + rd.ArtVersion + " > " + groupPath + LastVersionFile)
+}
+
+func GetLastHelmVersion(groupPath string) string {
+	lastVerOut, _, _ := shellout("cat " + groupPath + LastVersionFile + " || echo -n 'none'")
+	lastVerOut = strings.Replace(lastVerOut, "\n", "", -1)
+	return lastVerOut
 }
 
 func StreamHelmChartsMetadataToHub(nsGroupPaths *[]string, namespace string) {

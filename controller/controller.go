@@ -61,8 +61,15 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	projAuth := cli.GetProjectAuthByArtifactDigest(digest)
 	dirName := strings.ToLower(rd.Name)
 	os.MkdirAll("workspace/"+dirName, 0700)
+	groupPath := "workspace/" + dirName + "/"
 
-	if projAuth.Type != "NOCREDS" {
+	var helmDownloadPa cli.ProjectAuth
+
+	doInstall := false
+
+	helmDownloadPa.Type = projAuth.Type
+
+	if projAuth.Type == "CREDS" {
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
 		secretFile, err := os.Create(secretPath)
 		if err != nil {
@@ -70,16 +77,27 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		}
 		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 		cli.KubectlApply(secretPath)
-		resolvedPa := cli.ResolveHelmAuthSecret(dirName)
-		groupPath := "workspace/" + dirName + "/"
-		cli.ResolvePreviousDiffFile(groupPath)
-		cli.DownloadHelmChart(groupPath, rd, &resolvedPa)
-		cli.MergeHelmValues(groupPath, rd)
-		cli.ReplaceTagsForDiff(groupPath, rd.Namespace)
-		isDiff := cli.IsValuesDiff(groupPath)
-		sugar.Info("Values Diff? ", isDiff)
-		isFirstInstallDone := cli.IsFirstInstallDone(rd)
-		sugar.Info("Is first install done? ", isFirstInstallDone)
+		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
+	}
+
+	lastHelmVer := cli.GetLastHelmVersion(groupPath)
+	if rd.ArtVersion != lastHelmVer {
+		cli.DownloadHelmChart(groupPath, rd, &helmDownloadPa)
+		doInstall = true
+	}
+
+	cli.ResolvePreviousDiffFile(groupPath)
+
+	cli.MergeHelmValues(groupPath, rd)
+	cli.ReplaceTagsForDiff(groupPath, rd.Namespace)
+	if !doInstall {
+		doInstall = cli.IsValuesDiff(groupPath)
+	}
+	if !doInstall {
+		doInstall = !cli.IsFirstInstallDone(rd)
+	}
+
+	if doInstall {
 		cli.SetHelmChartAppVersion(groupPath, rd)
 		cli.ReplaceTagsForInstall(groupPath, rd.Namespace)
 		cli.CreateNamespaceIfMissing(rd.Namespace)

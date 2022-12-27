@@ -75,11 +75,12 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		cli.ResolvePreviousDiffFile(groupPath)
 		cli.DownloadHelmChart(groupPath, rd, &resolvedPa)
 		cli.MergeHelmValues(groupPath, rd)
-		cli.ReplaceTags(groupPath, rd.Namespace)
+		cli.ReplaceTagsForDiff(groupPath, rd.Namespace)
 		isDiff := cli.IsValuesDiff(groupPath)
 		sugar.Info("Values Diff? ", isDiff)
 		isFirstInstallDone := cli.IsFirstInstallDone(rd)
 		sugar.Info("Is first install done? ", isFirstInstallDone)
 		cli.SetHelmChartAppVersion(groupPath, rd)
+		cli.ReplaceTagsForInstall(groupPath, rd.Namespace)
 	}
 }

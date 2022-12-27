@@ -30,6 +30,7 @@ const (
 	ValuesDiff      = "values-diff.yaml"
 	ValuesDiffPrev  = "values-diff-prev.yaml"
 	LastVersionFile = "last_version"
+	InstallValues   = "install-values.yaml"
 )
 
 func InstallSealedCertificates() {
@@ -99,8 +100,13 @@ func ResolvePreviousDiffFile(groupPath string) {
 		" || echo 'no prev values file present yet' > " + groupPath + ValuesDiffPrev)
 }
 
-func ReplaceTags(groupPath string, namespace string) {
+func ReplaceTagsForDiff(groupPath string, namespace string) {
 	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + ValuesDiff + " --fordiff=true --resolveprops=true --namespace " + namespace
+	shellout(replaceTagsCmd)
+}
+
+func ReplaceTagsForInstall(groupPath string, namespace string) {
+	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + InstallValues + " --resolveprops=true --namespace " + namespace
 	shellout(replaceTagsCmd)
 }
 

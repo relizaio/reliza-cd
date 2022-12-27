@@ -50,6 +50,16 @@ func ResolveHelmAuthSecret(secretName string) ProjectAuth {
 	return pa
 }
 
+func ResolveEcrAuthSecret(secretName string) ProjectAuth {
+	var pa ProjectAuth
+	username, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.username} -n" + MyNamespace + " | base64 -d")
+	password, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.password} -n" + MyNamespace + " | base64 -d")
+	pa.Type = "ECR"
+	pa.Login = username
+	pa.Password = password
+	return pa
+}
+
 func KubectlApply(path string) {
 	shellout(KubectlApp + " apply -f " + path)
 }

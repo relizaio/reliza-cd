@@ -69,11 +69,22 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 
 	helmDownloadPa.Type = projAuth.Type
 
+	if projAuth.Type == "ECR" {
+		ecrSecretPath := "workspace/" + dirName + "/ecrreposecret.yaml"
+		ecrSecretFile, err := os.Create(ecrSecretPath)
+		if err != nil {
+			sugar.Error(err)
+		}
+		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, "argocd")
+		cli.KubectlApply(ecrSecretPath)
+		ecrAuthPa := cli.ResolveHelmAuthSecret(dirName)
+	}
+
 	if projAuth.Type == "CREDS" {
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
 		secretFile, err := os.Create(secretPath)
 		if err != nil {
-			sugar.Panic(err)
+			sugar.Error(err)
 		}
 		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 		cli.KubectlApply(secretPath)

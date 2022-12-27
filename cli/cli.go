@@ -189,6 +189,44 @@ spec:
 	}
 }
 
+func ProduceEcrSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string) {
+	secretTmpl :=
+		`apiVersion: bitnami.com/v1alpha1
+kind: SealedSecret
+metadata:
+  name: {{.Name}}
+  namespace: {{.Namespace}}
+  annotations:
+    sealedsecrets.bitnami.com/namespace-wide: "true"
+spec:
+  encryptedData:
+    username: {{.Username}}
+    password: {{.Password}}
+  template:
+    data:
+      url: {{.Url}}
+    metadata:
+      labels:
+        reliza.io/type: cdresource`
+
+	var secTmplRes SecretTemplateResolver
+	secTmplRes.Name = "ecr-" + rd.Name
+	secTmplRes.Namespace = namespace
+	secTmplRes.Username = projAuth.Login
+	secTmplRes.Password = projAuth.Password
+	secTmplRes.Url = rd.ArtUri
+
+	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
+	if err != nil {
+		panic(err)
+	}
+
+	err = tmpl.Execute(w, secTmplRes)
+	if err != nil {
+		panic(err)
+	}
+}
+
 type SecretTemplateResolver struct {
 	Name      string
 	Namespace string

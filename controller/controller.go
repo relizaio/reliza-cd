@@ -46,18 +46,20 @@ func Loop() {
 
 	cli.SetSealedCertificateOnTheHub(sealedCert)
 
-	instManifest := cli.GetInstanceCycloneDX()
+	instManifest, err := cli.GetInstanceCycloneDX()
 
-	rlzDeployments := cli.ParseInstanceCycloneDXIntoDeployments(instManifest)
+	if err == nil {
+		rlzDeployments := cli.ParseInstanceCycloneDXIntoDeployments(instManifest)
 
-	existingDeployments := collectExistingDeployments()
+		existingDeployments := collectExistingDeployments()
 
-	for _, rd := range rlzDeployments {
-		existingDeployments[rd.Name] = false
-		processSingleDeployment(&rd)
+		for _, rd := range rlzDeployments {
+			existingDeployments[rd.Name] = false
+			processSingleDeployment(&rd)
+		}
+
+		deleteObsoleteDeployments(&existingDeployments)
 	}
-
-	deleteObsoleteDeployments(&existingDeployments)
 }
 
 func deleteObsoleteDeployments(existingDeployments *map[string]bool) {

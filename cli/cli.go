@@ -103,9 +103,9 @@ func SetSealedCertificateOnTheHub(cert string) {
 	}
 }
 
-func GetInstanceCycloneDX() string {
-	instManifest, _, _ := shellout(RelizaCliApp + " exportinst")
-	return instManifest
+func GetInstanceCycloneDX() (string, error) {
+	instManifest, _, err := shellout(RelizaCliApp + " exportinst")
+	return instManifest, err
 }
 
 func ExtractRlzDigestFromCdxDigest(cdxHash cdx.Hash) string {

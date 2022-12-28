@@ -21,6 +21,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 	"text/template"
@@ -60,8 +61,38 @@ func shellout(command string) (string, string, error) {
 }
 
 func SetSealedCertificateOnTheHub(cert string) {
-	sugar.Info("Setting Bitnami Sealed Certificate on Reliza Hub")
-	shellout(RelizaCliApp + " cd setsecretcert --cert " + cert)
+	certPath := "workspace/sealedCert.pem"
+	doSet := false
+	existingCert, err := os.ReadFile(certPath)
+	if err != nil && os.IsNotExist(err) {
+		doSet = true
+	} else if err != nil {
+		doSet = true
+		sugar.Error(err)
+	} else if 0 != strings.Compare(cert, string(existingCert)) {
+		doSet = true
+	}
+
+	if doSet {
+		sugar.Info("Setting Bitnami Sealed Certificate on Reliza Hub")
+		_, _, err := shellout(RelizaCliApp + " cd setsecretcert --cert " + cert)
+		if err == nil {
+			err := os.RemoveAll(certPath)
+			if err != nil {
+				sugar.Error(err)
+			}
+			certCheckFile, err := os.Create(certPath)
+			if err != nil {
+				sugar.Error(err)
+			}
+			certCheckFile.WriteString(cert)
+			err = certCheckFile.Close()
+			if err != nil {
+				sugar.Error(err)
+			}
+		}
+		sugar.Info("Set Bitnami Sealed Certificate on Reliza Hub")
+	}
 }
 
 func GetInstanceCycloneDX() string {

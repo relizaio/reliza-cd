@@ -43,7 +43,6 @@ func Loop() {
 		sugar.Info("Installed Bitnami Sealed Certificates")
 	}
 
-	// TODO only set if changed / not set previously
 	cli.SetSealedCertificateOnTheHub(sealedCert)
 
 	instManifest := cli.GetInstanceCycloneDX()

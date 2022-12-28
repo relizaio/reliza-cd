@@ -37,12 +37,20 @@ const (
 	HelmMimeType = "application/vnd.cncf.helm.config.v1+json"
 )
 
-var sugar *zap.SugaredLogger
+var (
+	sugar       *zap.SugaredLogger
+	MyNamespace string
+)
 
 func init() {
 	var logger, _ = zap.NewProduction()
 	defer logger.Sync()
 	sugar = logger.Sugar()
+	if len(os.Getenv("MY_NAMESPACE")) > 0 {
+		MyNamespace = os.Getenv("MY_NAMESPACE")
+	} else {
+		MyNamespace = "argocd"
+	}
 }
 
 func shellout(command string) (string, string, error) {

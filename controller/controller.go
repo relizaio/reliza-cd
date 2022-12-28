@@ -78,7 +78,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	if projAuth.Type == "ECR" {
 		ecrSecretPath := "workspace/" + dirName + "/ecrreposecret.yaml"
 		ecrSecretFile := createSecretFile(ecrSecretPath)
-		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, "argocd")
+		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, cli.MyNamespace)
 		cli.KubectlApply(ecrSecretPath)
 		ecrAuthPa := cli.ResolveHelmAuthSecret("ecr-" + dirName)
 		ecrToken := getEcrToken(&ecrAuthPa)
@@ -89,7 +89,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		paForPlainSecret.Url = ecrAuthPa.Url
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
 		secretFile := createSecretFile(secretPath)
-		cli.ProducePlainSecretYaml(secretFile, rd, paForPlainSecret, "argocd")
+		cli.ProducePlainSecretYaml(secretFile, rd, paForPlainSecret, cli.MyNamespace)
 		cli.KubectlApply(secretPath)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}
@@ -97,7 +97,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	if projAuth.Type == "CREDS" {
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
 		secretFile := createSecretFile(secretPath)
-		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
+		cli.ProduceSecretYaml(secretFile, rd, projAuth, cli.MyNamespace)
 		cli.KubectlApply(secretPath)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}

@@ -25,7 +25,6 @@ import (
 const (
 	HelmApp         = "tools/helm"
 	KubectlApp      = "tools/kubectl"
-	MyNamespace     = "argocd" // TODO make configurable
 	WorkValues      = "work-values.yaml"
 	ValuesDiff      = "values-diff.yaml"
 	ValuesDiffPrev  = "values-diff-prev.yaml"

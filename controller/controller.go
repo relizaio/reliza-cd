@@ -40,19 +40,27 @@ func Loop() {
 			sealedCert = cli.GetSealedCert()
 			time.Sleep(3 * time.Second)
 		}
+		sugar.Info("Installed Bitnami Sealed Certificates")
 	}
 
 	// TODO only set if changed / not set previously
 	cli.SetSealedCertificateOnTheHub(sealedCert)
 
 	instManifest := cli.GetInstanceCycloneDX()
+
 	rlzDeployments := cli.ParseInstanceCycloneDXIntoDeployments(instManifest)
 
 	for _, rd := range rlzDeployments {
 		processSingleDeployment(&rd)
 	}
+}
 
-	sugar.Info(rlzDeployments)
+func createSecretFile(filePath string) *os.File {
+	ecrSecretFile, err := os.Create(filePath)
+	if err != nil {
+		sugar.Error(err)
+	}
+	return ecrSecretFile
 }
 
 func processSingleDeployment(rd *cli.RelizaDeployment) {
@@ -70,10 +78,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 
 	if projAuth.Type == "ECR" {
 		ecrSecretPath := "workspace/" + dirName + "/ecrreposecret.yaml"
-		ecrSecretFile, err := os.Create(ecrSecretPath)
-		if err != nil {
-			sugar.Error(err)
-		}
+		ecrSecretFile := createSecretFile(ecrSecretPath)
 		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, "argocd")
 		cli.KubectlApply(ecrSecretPath)
 		ecrAuthPa := cli.ResolveHelmAuthSecret("ecr-" + dirName)
@@ -84,10 +89,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		paForPlainSecret.Type = "ECR"
 		paForPlainSecret.Url = ecrAuthPa.Url
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
-		secretFile, err := os.Create(secretPath)
-		if err != nil {
-			sugar.Error(err)
-		}
+		secretFile := createSecretFile(secretPath)
 		cli.ProducePlainSecretYaml(secretFile, rd, paForPlainSecret, "argocd")
 		cli.KubectlApply(secretPath)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
@@ -95,10 +97,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 
 	if projAuth.Type == "CREDS" {
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
-		secretFile, err := os.Create(secretPath)
-		if err != nil {
-			sugar.Error(err)
-		}
+		secretFile := createSecretFile(secretPath)
 		cli.ProduceSecretYaml(secretFile, rd, projAuth, "argocd")
 		cli.KubectlApply(secretPath)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
@@ -107,11 +106,11 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	lastHelmVer := cli.GetLastHelmVersion(groupPath)
 	if rd.ArtVersion != lastHelmVer {
 		cli.DownloadHelmChart(groupPath, rd, &helmDownloadPa)
+		cli.RecordHelmChartVersion(groupPath, rd)
 		doInstall = true
 	}
 
 	cli.ResolvePreviousDiffFile(groupPath)
-
 	cli.MergeHelmValues(groupPath, rd)
 	cli.ReplaceTagsForDiff(groupPath, rd.Namespace)
 	if !doInstall {

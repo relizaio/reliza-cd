@@ -170,7 +170,7 @@ func InstallHelmChart(groupPath string, rd *RelizaDeployment) {
 	shellout(HelmApp + " upgrade --install " + helmChartName + " -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
 }
 
-func recordHelmChartVersion(groupPath string, rd *RelizaDeployment) {
+func RecordHelmChartVersion(groupPath string, rd *RelizaDeployment) {
 	shellout("echo " + rd.ArtVersion + " > " + groupPath + LastVersionFile)
 }
 

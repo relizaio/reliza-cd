@@ -213,6 +213,10 @@ metadata:
   namespace: {{.Namespace}}
   annotations:
     sealedsecrets.bitnami.com/namespace-wide: "true"
+  labels:
+    reliza.io/type: cdresource
+    reliza.io/name: {{.Name}}
+    
 spec:
   encryptedData:
     username: {{.Username}}
@@ -225,6 +229,7 @@ spec:
     metadata:
       labels:
         reliza.io/type: cdresource
+        reliza.io/name: {{.Name}}
         argocd.argoproj.io/secret-type: repository`
 
 	var secTmplRes SecretTemplateResolver
@@ -253,6 +258,7 @@ metadata:
   labels:
     argocd.argoproj.io/secret-type: repository
     reliza.io/type: cdresource
+    reliza.io/name: {{.Name}}
   name: {{.Name}}
   namespace: {{.Namespace}}
 type: Opaque
@@ -291,6 +297,9 @@ metadata:
   namespace: {{.Namespace}}
   annotations:
     sealedsecrets.bitnami.com/namespace-wide: "true"
+  labels:
+    reliza.io/type: cdresource
+    reliza.io/name: {{.Name}}
 spec:
   encryptedData:
     username: {{.Username}}
@@ -300,6 +309,7 @@ spec:
       url: {{.Url}}
     metadata:
       labels:
+        reliza.io/name: {{.Name}}
         reliza.io/type: cdresource`
 
 	var secTmplRes SecretTemplateResolver

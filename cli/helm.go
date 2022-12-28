@@ -236,6 +236,9 @@ func DeleteObsoleteDeployment(groupPath string) {
 		helmChartName := getChartNameFromDeployment(&rd)
 		sugar.Info("Uninstalling chart ", helmChartName, " from namespace ", rd.Namespace)
 		shellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
+		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + MyNamespace)
+		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=ecr-" + rd.Name + "' -n " + MyNamespace)
+		shellout(KubectlApp + " delete secret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + MyNamespace)
 		os.RemoveAll(groupPath)
 	}
 }

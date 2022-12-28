@@ -17,19 +17,21 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 package cli
 
 import (
+	"encoding/json"
 	"os"
 	"strconv"
 	"strings"
 )
 
 const (
-	HelmApp         = "tools/helm"
-	KubectlApp      = "tools/kubectl"
-	WorkValues      = "work-values.yaml"
-	ValuesDiff      = "values-diff.yaml"
-	ValuesDiffPrev  = "values-diff-prev.yaml"
-	LastVersionFile = "last_version"
-	InstallValues   = "install-values.yaml"
+	HelmApp             = "tools/helm"
+	KubectlApp          = "tools/kubectl"
+	WorkValues          = "work-values.yaml"
+	ValuesDiff          = "values-diff.yaml"
+	ValuesDiffPrev      = "values-diff-prev.yaml"
+	LastVersionFile     = "last_version"
+	InstallValues       = "install-values.yaml"
+	RecordedDeloyedData = "recorded-deployed-data.json"
 )
 
 func InstallSealedCertificates() {
@@ -167,6 +169,19 @@ func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) {
 func InstallHelmChart(groupPath string, rd *RelizaDeployment) {
 	helmChartName := getChartNameFromDeployment(rd)
 	shellout(HelmApp + " upgrade --install " + helmChartName + " -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
+}
+
+func RecordDeployedData(groupPath string, rd *RelizaDeployment) {
+	rdJson, err := json.Marshal(rd)
+	if err != nil {
+		sugar.Error(err)
+	}
+	rdFile, err := os.Create(groupPath + RecordedDeloyedData)
+	if err != nil {
+		sugar.Error(err)
+	}
+	rdFile.Write(rdJson)
+	rdFile.Close()
 }
 
 func RecordHelmChartVersion(groupPath string, rd *RelizaDeployment) {

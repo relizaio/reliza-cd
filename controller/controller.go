@@ -124,5 +124,6 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		cli.ReplaceTagsForInstall(groupPath, rd.Namespace)
 		cli.CreateNamespaceIfMissing(rd.Namespace)
 		cli.InstallHelmChart(groupPath, rd)
+		cli.RecordDeployedData(groupPath, rd)
 	}
 }

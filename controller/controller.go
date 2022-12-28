@@ -33,7 +33,7 @@ func init() {
 	sugar = logger.Sugar()
 }
 
-func Loop() {
+func loopInit() {
 	sealedCert := cli.GetSealedCert()
 	if len(sealedCert) < 1 {
 		cli.InstallSealedCertificates()
@@ -45,7 +45,9 @@ func Loop() {
 	}
 
 	cli.SetSealedCertificateOnTheHub(sealedCert)
+}
 
+func singleLoopRun() {
 	instManifest, err := cli.GetInstanceCycloneDX()
 
 	if err == nil {
@@ -59,6 +61,15 @@ func Loop() {
 		}
 
 		deleteObsoleteDeployments(&existingDeployments)
+	}
+}
+
+func Loop() {
+	loopInit()
+
+	for true {
+		singleLoopRun()
+		time.Sleep(15 * time.Second)
 	}
 }
 

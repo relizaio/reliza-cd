@@ -34,5 +34,5 @@ func main() {
 
 	controller.Loop()
 
-	sugar.Info("Done Reliza CD")
+	sugar.Info("Exited Reliza CD")
 }

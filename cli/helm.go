@@ -168,6 +168,7 @@ func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) {
 
 func InstallHelmChart(groupPath string, rd *RelizaDeployment) {
 	helmChartName := getChartNameFromDeployment(rd)
+	sugar.Info("Installing chart ", helmChartName, " for namespace ", rd.Namespace)
 	shellout(HelmApp + " upgrade --install " + helmChartName + " -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
 }
 
@@ -222,5 +223,19 @@ func CreateNamespaceIfMissing(namespace string) {
 		sugar.Error(err)
 	} else if nsListOutInt < 2 {
 		shellout(KubectlApp + " create ns " + namespace)
+	}
+}
+
+func DeleteObsoleteDeployment(groupPath string) {
+	recordedData, err := os.ReadFile(groupPath + RecordedDeloyedData)
+	if err != nil {
+		sugar.Error(err)
+	} else {
+		var rd RelizaDeployment
+		json.Unmarshal(recordedData, &rd)
+		helmChartName := getChartNameFromDeployment(&rd)
+		sugar.Info("Uninstalling chart ", helmChartName, " from namespace ", rd.Namespace)
+		shellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
+		os.RemoveAll(groupPath)
 	}
 }

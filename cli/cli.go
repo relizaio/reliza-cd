@@ -126,6 +126,27 @@ func resolveDeploymentNameFromString(origName string) string {
 	return rdName
 }
 
+func produceAppConfigMapFromCdxComponents(cdxComponents *[]cdx.Component) map[string]appConfig {
+	appConfigMap := make(map[string]appConfig)
+	if nil != cdxComponents && len(*cdxComponents) > 0 {
+		for _, comp := range *cdxComponents {
+			if comp.Type == "application" {
+				var appConfig appConfig
+				appConfig.AppVersion = comp.Version
+				if len(*comp.Properties) > 0 {
+					for _, prop := range *comp.Properties {
+						if prop.Name == "CONFIGURATION" {
+							appConfig.ValuesFile = prop.Value
+						}
+					}
+				}
+				appConfigMap[strings.ToLower(comp.Group)] = appConfig
+			}
+		}
+	}
+	return appConfigMap
+}
+
 func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDeployment {
 	bom := new(cdx.BOM)
 	manifestReader := strings.NewReader(cyclonedxManifest)
@@ -136,49 +157,36 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 
 	var rlzDeployments []RelizaDeployment
 
-	appConfigMap := make(map[string]appConfig)
+	appConfigMap := produceAppConfigMapFromCdxComponents(bom.Components)
 
-	for _, comp := range *bom.Components {
-		if comp.Type == "application" {
-			var appConfig appConfig
-			appConfig.AppVersion = comp.Version
-			if len(*comp.Properties) > 0 {
-				for _, prop := range *comp.Properties {
-					if prop.Name == "CONFIGURATION" {
-						appConfig.ValuesFile = prop.Value
-					}
+	if nil != bom.Components && len(*bom.Components) > 0 {
+		for _, comp := range *bom.Components {
+			if comp.MIMEType == HelmMimeType {
+				var rd RelizaDeployment
+				rd.Name = resolveDeploymentNameFromString(comp.Group)
+				namespaceBundle := strings.Split(comp.Group, "---")
+				rd.Namespace = namespaceBundle[0]
+				rd.Bundle = namespaceBundle[1]
+				rd.ArtUri = comp.Name
+				rd.ArtVersion = comp.Version
+				appConfig := appConfigMap[rd.Name]
+				configFile := "values.yaml"
+				if len(appConfig.ValuesFile) > 0 {
+					configFile = appConfig.ValuesFile
 				}
-			}
-			appConfigMap[strings.ToLower(comp.Group)] = appConfig
-		}
-	}
-
-	for _, comp := range *bom.Components {
-		if comp.MIMEType == HelmMimeType {
-			var rd RelizaDeployment
-			rd.Name = resolveDeploymentNameFromString(comp.Group)
-			namespaceBundle := strings.Split(comp.Group, "---")
-			rd.Namespace = namespaceBundle[0]
-			rd.Bundle = namespaceBundle[1]
-			rd.ArtUri = comp.Name
-			rd.ArtVersion = comp.Version
-			appConfig := appConfigMap[rd.Name]
-			configFile := "values.yaml"
-			if len(appConfig.ValuesFile) > 0 {
-				configFile = appConfig.ValuesFile
-			}
-			rd.ConfigFile = configFile
-			appVersion := ""
-			if len(appConfig.AppVersion) > 0 {
-				appVersion = appConfig.AppVersion
-			}
-			rd.AppVersion = appVersion
-			hashes := *comp.Hashes
-			if len(hashes) > 0 {
-				rd.ArtHash = hashes[0]
-				rlzDeployments = append(rlzDeployments, rd)
-			} else {
-				sugar.Error("Missing Helm artifact hash for = " + rd.ArtUri + ", skipping")
+				rd.ConfigFile = configFile
+				appVersion := ""
+				if len(appConfig.AppVersion) > 0 {
+					appVersion = appConfig.AppVersion
+				}
+				rd.AppVersion = appVersion
+				hashes := *comp.Hashes
+				if len(hashes) > 0 {
+					rd.ArtHash = hashes[0]
+					rlzDeployments = append(rlzDeployments, rd)
+				} else {
+					sugar.Error("Missing Helm artifact hash for = " + rd.ArtUri + ", skipping")
+				}
 			}
 		}
 	}

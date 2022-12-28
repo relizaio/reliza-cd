@@ -17,6 +17,7 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 package controller
 
 import (
+	"io/ioutil"
 	"os"
 	"time"
 
@@ -49,9 +50,36 @@ func Loop() {
 
 	rlzDeployments := cli.ParseInstanceCycloneDXIntoDeployments(instManifest)
 
+	existingDeployments := collectExistingDeployments()
+
 	for _, rd := range rlzDeployments {
+		existingDeployments[rd.Name] = false
 		processSingleDeployment(&rd)
 	}
+
+	deleteObsoleteDeployments(&existingDeployments)
+}
+
+func deleteObsoleteDeployments(existingDeployments *map[string]bool) {
+	for edKey, edVal := range *existingDeployments {
+		if edVal {
+			cli.DeleteObsoleteDeployment("workspace/" + edKey + "/")
+		}
+	}
+}
+
+func collectExistingDeployments() map[string]bool {
+	existingDeployments := make(map[string]bool)
+	workspaceEntries, err := ioutil.ReadDir("workspace")
+	if err != nil {
+		sugar.Error(err)
+	}
+	for _, we := range workspaceEntries {
+		if we.IsDir() {
+			existingDeployments[we.Name()] = true
+		}
+	}
+	return existingDeployments
 }
 
 func createSecretFile(filePath string) *os.File {

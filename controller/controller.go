@@ -18,7 +18,6 @@ package controller
 
 import (
 	"os"
-	"strings"
 	"time"
 
 	"github.com/relizaio/reliza-cd/cli"
@@ -59,7 +58,7 @@ func Loop() {
 func processSingleDeployment(rd *cli.RelizaDeployment) {
 	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
 	projAuth := cli.GetProjectAuthByArtifactDigest(digest)
-	dirName := strings.ToLower(rd.Name)
+	dirName := rd.Name
 	os.MkdirAll("workspace/"+dirName, 0700)
 	groupPath := "workspace/" + dirName + "/"
 
@@ -77,7 +76,21 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		}
 		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, "argocd")
 		cli.KubectlApply(ecrSecretPath)
-		ecrAuthPa := cli.ResolveHelmAuthSecret(dirName)
+		ecrAuthPa := cli.ResolveHelmAuthSecret("ecr-" + dirName)
+		ecrToken := getEcrToken(&ecrAuthPa)
+		var paForPlainSecret cli.ProjectAuth
+		paForPlainSecret.Login = "AWS"
+		paForPlainSecret.Password = ecrToken
+		paForPlainSecret.Type = "ECR"
+		paForPlainSecret.Url = ecrAuthPa.Url
+		secretPath := "workspace/" + dirName + "/reposecret.yaml"
+		secretFile, err := os.Create(secretPath)
+		if err != nil {
+			sugar.Error(err)
+		}
+		cli.ProducePlainSecretYaml(secretFile, rd, paForPlainSecret, "argocd")
+		cli.KubectlApply(secretPath)
+		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}
 
 	if projAuth.Type == "CREDS" {

@@ -18,6 +18,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"os/exec"
@@ -80,6 +81,12 @@ func GetSealedCert() string {
 	return cert
 }
 
+func resolveDeploymentNameFromString(origName string) string {
+	rdName := strings.ToLower(origName)
+	rdName = strings.ReplaceAll(rdName, " ", "-")
+	return rdName
+}
+
 func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDeployment {
 	bom := new(cdx.BOM)
 	manifestReader := strings.NewReader(cyclonedxManifest)
@@ -110,7 +117,7 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 	for _, comp := range *bom.Components {
 		if comp.MIMEType == HelmMimeType {
 			var rd RelizaDeployment
-			rd.Name = strings.ToLower(comp.Group)
+			rd.Name = resolveDeploymentNameFromString(comp.Group)
 			namespaceBundle := strings.Split(comp.Group, "---")
 			rd.Namespace = namespaceBundle[0]
 			rd.Bundle = namespaceBundle[1]
@@ -189,6 +196,43 @@ spec:
 	}
 }
 
+func ProducePlainSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string) {
+	secretTmpl :=
+		`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    argocd.argoproj.io/secret-type: repository
+    reliza.io/type: cdresource
+  name: {{.Name}}
+  namespace: {{.Namespace}}
+type: Opaque
+data:
+  type: aGVsbQ==
+  url: {{.Url}}
+  name: {{.NameBase64}}
+  username: {{.Username}}
+  password: {{.Password}}`
+
+	var secTmplRes SecretTemplateResolver
+	secTmplRes.Name = rd.Name
+	secTmplRes.NameBase64 = base64.StdEncoding.EncodeToString([]byte(rd.Name))
+	secTmplRes.Namespace = namespace
+	secTmplRes.Username = base64.StdEncoding.EncodeToString([]byte(projAuth.Login))
+	secTmplRes.Password = base64.StdEncoding.EncodeToString([]byte(projAuth.Password))
+	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(rd.ArtUri))
+
+	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
+	if err != nil {
+		panic(err)
+	}
+
+	err = tmpl.Execute(w, secTmplRes)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func ProduceEcrSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string) {
 	secretTmpl :=
 		`apiVersion: bitnami.com/v1alpha1
@@ -228,11 +272,12 @@ spec:
 }
 
 type SecretTemplateResolver struct {
-	Name      string
-	Namespace string
-	Username  string
-	Password  string
-	Url       string
+	Name       string
+	Namespace  string
+	Username   string
+	Password   string
+	Url        string
+	NameBase64 string
 }
 
 type RelizaDeployment struct {
@@ -250,6 +295,7 @@ type ProjectAuth struct {
 	Login    string `json:"login"`
 	Password string `json:"password"`
 	Type     string `json:"type"`
+	Url      string
 }
 
 type appConfig struct {

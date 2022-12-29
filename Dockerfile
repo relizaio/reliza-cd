@@ -24,6 +24,7 @@ RUN mkdir -p /app/workspace && mkdir /app/tools
 RUN adduser -u 1000 -D apprunner && chown apprunner:apprunner -R /app
 COPY --from=build-stage --chown=apprunner:apprunner /build/reliza-cd /app/reliza-cd
 COPY --from=build-stage --chown=apprunner:apprunner /build/kubeseal /app/tools/kubeseal
+COPY --from=build-stage --chown=apprunner:apprunner /build/kubectl /app/tools/kubectl
 COPY --from=build-stage --chown=apprunner:apprunner /build/reliza-cli /app/tools/reliza-cli
 COPY --from=build-stage --chown=apprunner:apprunner /build/linux-amd64/helm /app/tools/helm
 COPY --chown=apprunner:apprunner entrypoint.sh /entrypoint.sh

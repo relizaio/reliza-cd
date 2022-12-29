@@ -28,6 +28,7 @@ COPY --from=build-stage --chown=apprunner:apprunner /build/reliza-cli /app/tools
 COPY --from=build-stage --chown=apprunner:apprunner /build/linux-amd64/helm /app/tools/helm
 COPY --chown=apprunner:apprunner entrypoint.sh /entrypoint.sh
 
+RUN chmod 0700 /entrypoint.sh
 USER apprunner
 RUN echo "version=$VERSION" > /app/version && echo "commit=$GIT_COMMIT" >> /app/version && echo "branch=$GIT_BRANCH" >> /app/version
 

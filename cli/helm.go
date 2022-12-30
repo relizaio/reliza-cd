@@ -65,7 +65,8 @@ func cleanupHelmChart(helmChartPath string) {
 	shellout("rm -rf " + helmChartPath + "*.tgz")
 }
 
-func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
+func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error {
+	var err error
 	helmChartName := getChartNameFromDeployment(rd)
 	helmChartUri := strings.Replace(rd.ArtUri, "/"+helmChartName, "", -1)
 
@@ -83,22 +84,28 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) {
 		ociUri := strings.Replace(rd.ArtUri, "https://", "oci://", -1)
 		ociUri = strings.Replace(ociUri, "http://", "oci://", -1)
 		if pa.Type != "NOCREDS" {
-			shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+			_, _, err = shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
 		} else {
-			shellout(HelmApp + " registry login " + helmChartUri)
+			_, _, err = shellout(HelmApp + " registry login " + helmChartUri)
 		}
-		shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
+		if err == nil {
+			shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
+		}
 	} else {
 		if pa.Type != "NOCREDS" {
-			shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
 		} else {
-			shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri)
+			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri)
 		}
-		shellout(HelmApp + " repo update")
-		shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
+		if err == nil {
+			shellout(HelmApp + " repo update")
+			shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
+		}
 	}
-
-	shellout("tar -xzvf " + path + "*.tgz -C " + path)
+	if err == nil {
+		_, _, err = shellout("tar -xzvf " + path + "*.tgz -C " + path)
+	}
+	return err
 }
 
 func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
@@ -166,10 +173,11 @@ func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) {
 	}
 }
 
-func InstallHelmChart(groupPath string, rd *RelizaDeployment) {
+func InstallHelmChart(groupPath string, rd *RelizaDeployment) error {
 	helmChartName := getChartNameFromDeployment(rd)
 	sugar.Info("Installing chart ", helmChartName, " for namespace ", rd.Namespace)
-	shellout(HelmApp + " upgrade --install " + helmChartName + " --create-namespace -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
+	_, _, err := shellout(HelmApp + " upgrade --install " + helmChartName + " --create-namespace -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
+	return err
 }
 
 func RecordDeployedData(groupPath string, rd *RelizaDeployment) {

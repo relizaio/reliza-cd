@@ -78,9 +78,6 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 		useOci = true
 	}
 	if useOci {
-		// TODO: test oci
-		// TODO: special case for ECR
-		sugar.Info(helmChartUri)
 		ociUri := strings.Replace(rd.ArtUri, "https://", "", -1)
 		ociUri = strings.Replace(ociUri, "http://", "", -1)
 		ociUri = "oci://" + ociUri

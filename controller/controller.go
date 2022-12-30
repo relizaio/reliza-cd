@@ -63,6 +63,8 @@ func singleLoopRun() {
 			namespacesForWatcher[rd.Namespace] = true
 		}
 
+		cli.InstallWatcher(&namespacesForWatcher)
+
 		deleteObsoleteDeployments(&existingDeployments)
 	}
 }

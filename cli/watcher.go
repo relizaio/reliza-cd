@@ -19,20 +19,64 @@ package cli
 import (
 	"os"
 	"regexp"
+	"strings"
 )
 
-func installWatcher(namespacesForWatcher *map[string]bool) {
+const (
+	watcherPath                = "workspace/watcher/"
+	watcherLastKnownNamespaces = watcherPath + "lastKnownNamespaces"
+)
+
+func InstallWatcher(namespacesForWatcher *map[string]bool) {
+	namespacesForWatcherStr := ""
 	if nil != *namespacesForWatcher && len(*namespacesForWatcher) > 0 {
-		namespacesForWatcherStr := constructNamespaceStringFromMap(namespacesForWatcher)
-		shellout(HelmApp + " helm repo add reliza https://registry.relizahub.com/chartrepo/library")
-		shellout(HelmApp + " helm repo update reliza")
-		shellout(KubectlApp + " create secret generic reliza-watcher -n " + MyNamespace + " --from-literal=reliza-api-id=" + os.Getenv("APIKEYID") + " --from-literal=reliza-api-key=" + os.Getenv("APIKEY"))
-		hubUri := os.Getenv("URI")
-		if len(hubUri) < 1 {
-			hubUri = "https://app.relizahub.com"
-		}
-		shellout(HelmApp + " install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " reliza/reliza-watcher")
+		namespacesForWatcherStr = constructNamespaceStringFromMap(namespacesForWatcher)
 	}
+
+	isWatcherConfigUpdated := isWatcherConfigUpdated(namespacesForWatcherStr)
+	if isWatcherConfigUpdated {
+		installWatcherRoutine(namespacesForWatcherStr)
+		recordWatcherConfig(namespacesForWatcherStr)
+	}
+
+}
+
+func recordWatcherConfig(namespacesForWatcherStr string) {
+	os.MkdirAll(watcherPath, 0700)
+	recFile, err := os.Create(watcherLastKnownNamespaces)
+	if err != nil {
+		sugar.Error(err)
+	}
+	recFile.Write([]byte(namespacesForWatcherStr))
+	recFile.Close()
+}
+
+func isWatcherConfigUpdated(namespacesForWatcherStr string) bool {
+	isDiff := false
+	prevVal, err := os.ReadFile(watcherLastKnownNamespaces)
+	if err != nil && os.IsNotExist(err) {
+		isDiff = true
+	} else if err != nil {
+		sugar.Error(err)
+	}
+
+	if !isDiff {
+		if 0 != strings.Compare(namespacesForWatcherStr, string(prevVal)) {
+			isDiff = true
+		}
+	}
+	return isDiff
+}
+
+func installWatcherRoutine(namespacesForWatcherStr string) {
+	shellout(HelmApp + " helm repo add reliza https://registry.relizahub.com/chartrepo/library")
+	shellout(HelmApp + " helm repo update reliza")
+	shellout(KubectlApp + " create secret generic reliza-watcher -n " + MyNamespace + " --from-literal=reliza-api-id=" + os.Getenv("APIKEYID") + " --from-literal=reliza-api-key=" + os.Getenv("APIKEY"))
+	hubUri := os.Getenv("URI")
+	if len(hubUri) < 1 {
+		hubUri = "https://app.relizahub.com"
+	}
+	shellout(HelmApp + " install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " reliza/reliza-watcher")
 }
 
 func constructNamespaceStringFromMap(namespacesForWatcher *map[string]bool) string {

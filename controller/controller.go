@@ -105,7 +105,7 @@ func createSecretFile(filePath string) *os.File {
 
 func processSingleDeployment(rd *cli.RelizaDeployment) {
 	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
-	projAuth := cli.GetProjectAuthByArtifactDigest(digest)
+	projAuth := cli.GetProjectAuthByArtifactDigest(digest, rd)
 	dirName := rd.Name
 	os.MkdirAll("workspace/"+dirName, 0700)
 	groupPath := "workspace/" + dirName + "/"

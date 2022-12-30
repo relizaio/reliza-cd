@@ -43,9 +43,9 @@ func InstallSealedCertificates() {
 
 func ResolveHelmAuthSecret(secretName string) ProjectAuth {
 	var pa ProjectAuth
-	username, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.username} -n" + MyNamespace + " | base64 -d")
-	password, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.password} -n" + MyNamespace + " | base64 -d")
-	url, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.url} -n" + MyNamespace + " | base64 -d")
+	username, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.username} -n " + MyNamespace + " | base64 -d")
+	password, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.password} -n " + MyNamespace + " | base64 -d")
+	url, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.url} -n " + MyNamespace + " | base64 -d")
 	pa.Type = "CREDS"
 	if strings.Contains(url, ".dkr.ecr.") && strings.Contains(url, "amazonaws.com") {
 		pa.Type = "ECR"

@@ -142,7 +142,8 @@ func produceAppConfigMapFromCdxComponents(cdxComponents *[]cdx.Component) map[st
 						}
 					}
 				}
-				appConfigMap[strings.ToLower(comp.Group)] = appConfig
+				deplName := resolveDeploymentNameFromString(comp.Group)
+				appConfigMap[deplName] = appConfig
 			}
 		}
 	}

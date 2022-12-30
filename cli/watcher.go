@@ -78,7 +78,7 @@ func installWatcherRoutine(namespacesForWatcherStr string) {
 	if len(hubUri) < 1 {
 		hubUri = "https://app.relizahub.com"
 	}
-	shellout(HelmApp + " upgrade --install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " reliza/reliza-watcher")
+	shellout(HelmApp + " upgrade --install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.0 reliza/reliza-watcher")
 }
 
 func constructNamespaceStringFromMap(namespacesForWatcher *map[string]bool) string {

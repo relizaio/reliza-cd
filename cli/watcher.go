@@ -27,7 +27,11 @@ func installWatcher(namespacesForWatcher *map[string]bool) {
 		shellout(HelmApp + " helm repo add reliza https://registry.relizahub.com/chartrepo/library")
 		shellout(HelmApp + " helm repo update reliza")
 		shellout(KubectlApp + " create secret generic reliza-watcher -n " + MyNamespace + " --from-literal=reliza-api-id=" + os.Getenv("APIKEYID") + " --from-literal=reliza-api-key=" + os.Getenv("APIKEY"))
-		shellout(HelmApp + " install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" reliza/reliza-watcher")
+		hubUri := os.Getenv("URI")
+		if len(hubUri) < 1 {
+			hubUri = "https://app.relizahub.com"
+		}
+		shellout(HelmApp + " install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " reliza/reliza-watcher")
 	}
 }
 

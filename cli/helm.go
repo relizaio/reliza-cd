@@ -83,13 +83,18 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 		sugar.Info(helmChartUri)
 		ociUri := strings.Replace(rd.ArtUri, "https://", "oci://", -1)
 		ociUri = strings.Replace(ociUri, "http://", "oci://", -1)
+		// if pa.Type != "NOCREDS" {
+		// 	_, _, err = shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+		// } else {
+		// 	_, _, err = shellout(HelmApp + " registry login " + helmChartUri)
+		// }
+		// if err == nil {
+		// 	_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
+		// }
 		if pa.Type != "NOCREDS" {
-			_, _, err = shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+			_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " --username " + pa.Login + " --password " + pa.Password + " -d " + path)
 		} else {
-			_, _, err = shellout(HelmApp + " registry login " + helmChartUri)
-		}
-		if err == nil {
-			shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
+			_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
 		}
 	} else {
 		if pa.Type != "NOCREDS" {

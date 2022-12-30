@@ -197,8 +197,8 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 
 }
 
-func GetProjectAuthByArtifactDigest(artDigest string, rd *RelizaDeployment) ProjectAuth {
-	authResp, _, _ := shellout(RelizaCliApp + " cd artsecrets --artdigest " + artDigest + " --namespace " + rd.Namespace)
+func GetProjectAuthByArtifactDigest(artDigest string) ProjectAuth {
+	authResp, _, _ := shellout(RelizaCliApp + " cd artsecrets --artdigest " + artDigest + " --namespace " + MyNamespace)
 	var projectAuth map[string]ProjectAuth
 	json.Unmarshal([]byte(authResp), &projectAuth)
 	return projectAuth["artifactDownloadSecrets"]

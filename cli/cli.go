@@ -38,8 +38,10 @@ const (
 )
 
 var (
-	sugar       *zap.SugaredLogger
-	MyNamespace string
+	sugar         *zap.SugaredLogger
+	MyNamespace   string
+	watcherImage  string
+	enableWatcher bool
 )
 
 func init() {
@@ -50,6 +52,18 @@ func init() {
 		MyNamespace = os.Getenv("MY_NAMESPACE")
 	} else {
 		MyNamespace = "argocd"
+	}
+	if len(os.Getenv("WATCHER_IMAGE")) > 0 {
+		watcherImage = os.Getenv("WATCHER_IMAGE")
+	} else {
+		watcherImage = "relizaio/reliza-watcher"
+	}
+	enableWatcher = true
+	if len(os.Getenv("ENABLE_WATCHER")) > 0 {
+		enableWatcherStr := os.Getenv("ENABLE_WATCHER")
+		if strings.ToLower(enableWatcherStr) == "false" {
+			enableWatcher = false
+		}
 	}
 }
 

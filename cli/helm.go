@@ -96,7 +96,7 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri)
 		}
 		if err == nil {
-			shellout(HelmApp + " repo update")
+			shellout(HelmApp + " repo update " + helmChartName)
 			shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
 		}
 	}

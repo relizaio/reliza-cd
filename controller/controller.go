@@ -55,9 +55,12 @@ func singleLoopRun() {
 
 		existingDeployments := collectExistingDeployments()
 
+		namespacesForWatcher := make(map[string]bool)
+
 		for _, rd := range rlzDeployments {
 			existingDeployments[rd.Name] = false
 			processSingleDeployment(&rd)
+			namespacesForWatcher[rd.Namespace] = true
 		}
 
 		deleteObsoleteDeployments(&existingDeployments)

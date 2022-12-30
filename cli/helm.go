@@ -81,19 +81,15 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 		// TODO: test oci
 		// TODO: special case for ECR
 		sugar.Info(helmChartUri)
-		ociUri := strings.Replace(rd.ArtUri, "https://", "oci://", -1)
-		ociUri = strings.Replace(ociUri, "http://", "oci://", -1)
-		// if pa.Type != "NOCREDS" {
-		// 	_, _, err = shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
-		// } else {
-		// 	_, _, err = shellout(HelmApp + " registry login " + helmChartUri)
-		// }
-		// if err == nil {
-		// 	_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
-		// }
+		ociUri := strings.Replace(rd.ArtUri, "https://", "", -1)
+		ociUri = strings.Replace(ociUri, "http://", "", -1)
+		ociUri = "oci://" + ociUri
 		if pa.Type != "NOCREDS" {
-			_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " --username " + pa.Login + " --password " + pa.Password + " -d " + path)
+			_, _, err = shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
 		} else {
+			_, _, err = shellout(HelmApp + " registry login " + helmChartUri)
+		}
+		if err == nil {
 			_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
 		}
 	} else {

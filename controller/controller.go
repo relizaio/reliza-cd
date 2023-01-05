@@ -19,6 +19,7 @@ package controller
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/relizaio/reliza-cd/cli"
@@ -58,7 +59,7 @@ func singleLoopRun() {
 		namespacesForWatcher := make(map[string]bool)
 
 		for _, rd := range rlzDeployments {
-			existingDeployments[rd.Name] = false
+			existingDeployments[rd.Name] = true
 			processSingleDeployment(&rd)
 			namespacesForWatcher[rd.Namespace] = true
 		}
@@ -66,6 +67,8 @@ func singleLoopRun() {
 		cli.InstallWatcher(&namespacesForWatcher)
 
 		deleteObsoleteDeployments(&existingDeployments)
+
+		helmDataStreamToHub(&existingDeployments)
 	}
 }
 
@@ -78,9 +81,41 @@ func Loop() {
 	}
 }
 
+func helmDataStreamToHub(existingDeployments *map[string]bool) {
+	// collect per namespace
+	perNamespaceActiveDepl := map[string]cli.PathsPerNamespace{}
+	for edKey, edVal := range *existingDeployments {
+		ns := getNamespaceFromPath(edKey)
+		curPaths, exists := perNamespaceActiveDepl[ns]
+		if exists && edVal {
+			curPaths.Paths = append(curPaths.Paths, "workspace/"+edKey+"/")
+		} else if edVal {
+			curPaths = cli.PathsPerNamespace{}
+			curPaths.Paths = append(curPaths.Paths, "workspace/"+edKey+"/")
+			curPaths.Namespace = ns
+			perNamespaceActiveDepl[ns] = curPaths
+			sugar.Info("In wrapper debug length = ", len(perNamespaceActiveDepl[ns].Paths))
+		} else if !exists {
+			curPaths = cli.PathsPerNamespace{}
+			curPaths.Paths = []string{}
+			curPaths.Namespace = ns
+			perNamespaceActiveDepl[ns] = curPaths
+		}
+	}
+
+	for _, ppn := range perNamespaceActiveDepl {
+		cli.StreamHelmChartMetadataToHub(&ppn)
+	}
+
+}
+
+func getNamespaceFromPath(path string) string {
+	return strings.Split(path, "---")[0]
+}
+
 func deleteObsoleteDeployments(existingDeployments *map[string]bool) {
 	for edKey, edVal := range *existingDeployments {
-		if edVal {
+		if !edVal {
 			cli.DeleteObsoleteDeployment("workspace/" + edKey + "/")
 		}
 	}
@@ -94,7 +129,7 @@ func collectExistingDeployments() map[string]bool {
 	}
 	for _, we := range workspaceEntries {
 		if we.IsDir() && we.Name() != "watcher" {
-			existingDeployments[we.Name()] = true
+			existingDeployments[we.Name()] = false
 		}
 	}
 	return existingDeployments

@@ -201,18 +201,24 @@ func GetLastHelmVersion(groupPath string) string {
 	return lastVerOut
 }
 
-func StreamHelmChartsMetadataToHub(nsGroupPaths *[]string, namespace string) {
+func StreamHelmChartMetadataToHub(ppn *PathsPerNamespace) {
 	images := ""
-	for _, groupPath := range *nsGroupPaths {
+	sugar.Info("Namespace ", ppn.Namespace, ", paths length ", len(ppn.Paths))
+	for _, groupPath := range ppn.Paths {
 		images += " " + getHelmChartDigest(groupPath)
 	}
-	if len(images) > 1 {
-		shellout(RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + namespace + " --sender helmsender" + namespace)
+	if len(images) < 1 {
+		images = " " // required otherwise cli looks for images in file
 	}
+
+	sendMetaCmd := RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + ppn.Namespace + " --sender helmsender" + ppn.Namespace
+	sugar.Info(sendMetaCmd)
+	shellout(RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + ppn.Namespace + " --sender helmsender" + ppn.Namespace)
 }
 
 func getHelmChartDigest(groupPath string) string {
 	digest, _, _ := shellout("sha256sum " + groupPath + "*.tgz | cut -f 1 -d ' '")
+	digest = strings.ReplaceAll(digest, "\n", "")
 	return "sha256:" + digest
 }
 
@@ -236,4 +242,10 @@ func DeleteObsoleteDeployment(groupPath string) {
 		shellout(KubectlApp + " delete secret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + MyNamespace)
 		os.RemoveAll(groupPath)
 	}
+}
+
+type PathsPerNamespace struct {
+	Namespace string
+	Paths     []string
+	isEmpty   bool
 }

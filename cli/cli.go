@@ -147,12 +147,13 @@ func produceAppConfigMapFromCdxComponents(cdxComponents *[]cdx.Component) map[st
 			if comp.Type == "application" {
 				var appConfig appConfig
 				appConfig.AppVersion = comp.Version
+				appConfig.ValuesFile = "values.yaml"
 				if len(*comp.Properties) > 0 {
 					for _, prop := range *comp.Properties {
 						if prop.Name == "CONFIGURATION" && prop.Value != "default" {
 							appConfig.ValuesFile = prop.Value
-						} else {
-							appConfig.ValuesFile = "values.yaml"
+						} else if prop.Name == "HELM_APP_VERSION" {
+							appConfig.AppVersion = prop.Value
 						}
 					}
 				}
@@ -195,8 +196,8 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 				appVersion := ""
 				if len(appConfig.AppVersion) > 0 {
 					appVersion = appConfig.AppVersion
+					rd.AppVersion = appVersion
 				}
-				rd.AppVersion = appVersion
 				hashes := *comp.Hashes
 				if len(hashes) > 0 {
 					rd.ArtHash = hashes[0]

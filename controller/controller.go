@@ -94,7 +94,6 @@ func helmDataStreamToHub(existingDeployments *map[string]bool) {
 			curPaths.Paths = append(curPaths.Paths, "workspace/"+edKey+"/")
 			curPaths.Namespace = ns
 			perNamespaceActiveDepl[ns] = curPaths
-			sugar.Info("In wrapper debug length = ", len(perNamespaceActiveDepl[ns].Paths))
 		} else if !exists {
 			curPaths = cli.PathsPerNamespace{}
 			curPaths.Paths = []string{}

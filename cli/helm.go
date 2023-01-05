@@ -24,14 +24,15 @@ import (
 )
 
 const (
-	HelmApp             = "tools/helm"
-	KubectlApp          = "tools/kubectl"
-	WorkValues          = "work-values.yaml"
-	ValuesDiff          = "values-diff.yaml"
-	ValuesDiffPrev      = "values-diff-prev.yaml"
-	LastVersionFile     = "last_version"
-	InstallValues       = "install-values.yaml"
-	RecordedDeloyedData = "recorded-deployed-data.json"
+	HelmApp               = "tools/helm"
+	KubectlApp            = "tools/kubectl"
+	WorkValues            = "work-values.yaml"
+	ValuesDiff            = "values-diff.yaml"
+	ValuesDiffPrev        = "values-diff-prev.yaml"
+	LastVersionFile       = "last_version"
+	InstallValues         = "install-values.yaml"
+	RecordedDeloyedData   = "recorded-deployed-data.json"
+	WatcherHelmDataSuffix = "-watcher-helm.json"
 )
 
 func InstallSealedCertificates() {
@@ -203,23 +204,70 @@ func GetLastHelmVersion(groupPath string) string {
 
 func StreamHelmChartMetadataToHub(ppn *PathsPerNamespace) {
 	images := ""
-	sugar.Info("Namespace ", ppn.Namespace, ", paths length ", len(ppn.Paths))
 	for _, groupPath := range ppn.Paths {
 		images += " " + getHelmChartDigest(groupPath)
 	}
+
+	doStream := true
+
 	if len(images) < 1 {
 		images = " " // required otherwise cli looks for images in file
+	} else {
+		doStream = isHelmWatcherStreamDiff(ppn, images)
 	}
 
-	sendMetaCmd := RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + ppn.Namespace + " --sender helmsender" + ppn.Namespace
-	sugar.Info(sendMetaCmd)
-	shellout(RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + ppn.Namespace + " --sender helmsender" + ppn.Namespace)
+	if doStream {
+		sendMetaCmd := RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + ppn.Namespace + " --sender helmsender" + ppn.Namespace
+		sugar.Info(sendMetaCmd)
+		_, _, err := shellout(RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + ppn.Namespace + " --sender helmsender" + ppn.Namespace)
+		if err == nil {
+			recordStreamedHelmData(ppn, images)
+		}
+	}
+}
+
+func isHelmWatcherStreamDiff(ppn *PathsPerNamespace, curImages string) bool {
+	isDiff := false
+	prevStream, err := os.ReadFile("workspace/" + ppn.Namespace + WatcherHelmDataSuffix)
+	if err != nil && os.IsNotExist(err) {
+		isDiff = true
+	} else if err != nil {
+		sugar.Error(err)
+		isDiff = true
+	}
+
+	if !isDiff {
+		var prevNsi NamespaceImages
+		json.Unmarshal(prevStream, &prevNsi)
+
+		if 0 != strings.Compare(curImages, prevNsi.Images) {
+			isDiff = true
+		}
+	}
+	return isDiff
 }
 
 func getHelmChartDigest(groupPath string) string {
 	digest, _, _ := shellout("sha256sum " + groupPath + "*.tgz | cut -f 1 -d ' '")
 	digest = strings.ReplaceAll(digest, "\n", "")
 	return "sha256:" + digest
+}
+
+func recordStreamedHelmData(ppn *PathsPerNamespace, images string) {
+	var nsImages NamespaceImages
+	nsImages.Namespace = ppn.Namespace
+	nsImages.Images = images
+
+	nsiJson, err := json.Marshal(nsImages)
+	if err != nil {
+		sugar.Error(err)
+	}
+	nsiFile, err := os.Create("workspace/" + ppn.Namespace + WatcherHelmDataSuffix)
+	if err != nil {
+		sugar.Error(err)
+	}
+	nsiFile.Write(nsiJson)
+	nsiFile.Close()
 }
 
 func getChartNameFromDeployment(rd *RelizaDeployment) string {
@@ -248,4 +296,9 @@ type PathsPerNamespace struct {
 	Namespace string
 	Paths     []string
 	isEmpty   bool
+}
+
+type NamespaceImages struct {
+	Namespace string
+	Images    string
 }

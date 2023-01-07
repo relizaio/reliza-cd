@@ -7,11 +7,11 @@ RUN go build
 ADD https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.18.0/kubeseal-0.18.0-linux-amd64.tar.gz ./kubeseal-0.18.0-linux-amd64.tar.gz
 ADD https://get.helm.sh/helm-v3.10.3-linux-amd64.tar.gz ./helm-v3.10.3-linux-amd64.tar.gz
 ADD https://storage.googleapis.com/kubernetes-release/release/v1.23.14/bin/linux/amd64/kubectl ./kubectl
-ADD https://d7ge14utcyki8.cloudfront.net/reliza-cli-download/2023.01.2/reliza-cli-2023.01.2-linux-amd64.zip ./reliza-cli-2023.01.2-linux-amd64.zip
+ADD https://d7ge14utcyki8.cloudfront.net/reliza-cli-download/2023.01.4/reliza-cli-2023.01.4-linux-amd64.zip ./reliza-cli-2023.01.4-linux-amd64.zip
 RUN sha256sum -c tools.sha256
 RUN tar -xzvf kubeseal-0.18.0-linux-amd64.tar.gz
 RUN tar -xzvf helm-v3.10.3-linux-amd64.tar.gz
-RUN unzip reliza-cli-2023.01.2-linux-amd64.zip
+RUN unzip reliza-cli-2023.01.4-linux-amd64.zip
 
 FROM alpine:3.17.0@sha256:8914eb54f968791faf6a8638949e480fef81e697984fba772b3976835194c6d4 as release-stage
 ARG CI_ENV=noci

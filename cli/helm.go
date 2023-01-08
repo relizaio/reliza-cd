@@ -112,7 +112,7 @@ func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 	present := false
 	custValCmd := RelizaCliApp + " instprops --property CUSTOM_VALUES --usenamespacebundle=true --namespace " + rd.Namespace + " --bundle '" + rd.Bundle + "'"
 	propsFromCli, _, _ := shellout(custValCmd)
-	sugar.Info("custValues = ", propsFromCli)
+	sugar.Debug("custValues = ", propsFromCli)
 	var secretPropsResp SecretPropsCliResponse
 	json.Unmarshal([]byte(propsFromCli), &secretPropsResp)
 

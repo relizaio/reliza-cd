@@ -33,6 +33,7 @@ const (
 	InstallValues         = "install-values.yaml"
 	RecordedDeloyedData   = "recorded-deployed-data.json"
 	WatcherHelmDataSuffix = "-watcher-helm.json"
+	CustomValuesFile      = "reliza-hub-custom-values.yaml"
 )
 
 func InstallSealedCertificates() {
@@ -107,9 +108,45 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 	return err
 }
 
+func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
+	present := false
+	custValCmd := RelizaCliApp + " instprops --property CUSTOM_VALUES --usenamespacebundle=true --namespace " + rd.Namespace + " --bundle '" + rd.Bundle + "'"
+	propsFromCli, _, _ := shellout(custValCmd)
+	sugar.Info("custValues = ", propsFromCli)
+	var secretPropsResp SecretPropsCliResponse
+	json.Unmarshal([]byte(propsFromCli), &secretPropsResp)
+
+	custValues := ""
+	if len(secretPropsResp.Properties) > 0 {
+		prop := secretPropsResp.Properties[0]
+		custValues = prop.Value
+	}
+
+	if len(custValues) > 0 {
+		helmChartName := getChartNameFromDeployment(rd)
+		customValuesFilePath := groupPath + helmChartName + "/" + CustomValuesFile
+		shellout("rm -rf " + customValuesFilePath)
+		customValuesFile, err := os.Create(customValuesFilePath)
+		if err != nil {
+			sugar.Error(err)
+		} else {
+			customValuesFile.WriteString(custValues)
+			customValuesFile.Close()
+			present = true
+		}
+	}
+
+	return present
+}
+
 func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
+	hasCustomValues := resolveCustomValuesFromHub(groupPath, rd)
 	helmChartName := getChartNameFromDeployment(rd)
-	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + " -f " + rd.ConfigFile + " --outfile " + groupPath + WorkValues
+	valuesFlags := " -f " + rd.ConfigFile
+	if hasCustomValues {
+		valuesFlags += " -f " + CustomValuesFile
+	}
+	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + valuesFlags + " --outfile " + groupPath + WorkValues
 	shellout(helmValuesCmd)
 }
 
@@ -301,4 +338,20 @@ type PathsPerNamespace struct {
 type NamespaceImages struct {
 	Namespace string
 	Images    string
+}
+
+type SecretPropsCliResponse struct {
+	Secrets    []ResolvedSecret   `json:"secrets"`
+	Properties []ResolvedProperty `json:"properties"`
+}
+
+type ResolvedSecret struct {
+	Secret    string `json:"value"`
+	Timestamp int64  `json:"lastUpdated"`
+	Key       string `json:"key"`
+}
+
+type ResolvedProperty struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }

@@ -139,7 +139,7 @@ func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 	return present
 }
 
-func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
+func MergeHelmValues(groupPath string, rd *RelizaDeployment) error {
 	hasCustomValues := resolveCustomValuesFromHub(groupPath, rd)
 	helmChartName := getChartNameFromDeployment(rd)
 	valuesFlags := " -f " + rd.ConfigFile
@@ -147,23 +147,27 @@ func MergeHelmValues(groupPath string, rd *RelizaDeployment) {
 		valuesFlags += " -f " + CustomValuesFile
 	}
 	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + valuesFlags + " --outfile " + groupPath + WorkValues
-	shellout(helmValuesCmd)
+	_, _, err := shellout(helmValuesCmd)
+	return err
 }
 
-func ResolvePreviousDiffFile(groupPath string) {
+func ResolvePreviousDiffFile(groupPath string) error {
 	os.RemoveAll(groupPath + ValuesDiffPrev)
-	shellout("cp " + groupPath + ValuesDiff + " " + groupPath + ValuesDiffPrev +
+	_, _, err := shellout("cp " + groupPath + ValuesDiff + " " + groupPath + ValuesDiffPrev +
 		" || echo 'no prev values file present yet' > " + groupPath + ValuesDiffPrev)
+	return err
 }
 
-func ReplaceTagsForDiff(groupPath string, namespace string) {
+func ReplaceTagsForDiff(groupPath string, namespace string) error {
 	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + ValuesDiff + " --fordiff=true --resolveprops=true --namespace " + namespace
-	shellout(replaceTagsCmd)
+	_, _, err := shellout(replaceTagsCmd)
+	return err
 }
 
-func ReplaceTagsForInstall(groupPath string, namespace string) {
+func ReplaceTagsForInstall(groupPath string, namespace string) error {
 	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + InstallValues + " --resolveprops=true --namespace " + namespace
-	shellout(replaceTagsCmd)
+	_, _, err := shellout(replaceTagsCmd)
+	return err
 }
 
 func IsValuesDiff(groupPath string) bool {
@@ -202,11 +206,13 @@ func IsFirstInstallDone(rd *RelizaDeployment) bool {
 	return isFirstInstallDone
 }
 
-func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) {
+func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) error {
+	var err error
 	if len(rd.AppVersion) > 0 {
 		helmChartName := getChartNameFromDeployment(rd)
-		shellout("sed -i \"s/^appVersion:.*$/appVersion: " + rd.AppVersion + "/\" " + groupPath + helmChartName + "/Chart.yaml")
+		_, _, err = shellout("sed -i \"s/^appVersion:.*$/appVersion: " + rd.AppVersion + "/\" " + groupPath + helmChartName + "/Chart.yaml")
 	}
+	return err
 }
 
 func InstallHelmChart(groupPath string, rd *RelizaDeployment) error {

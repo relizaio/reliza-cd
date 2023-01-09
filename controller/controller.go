@@ -183,9 +183,10 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}
 
+	var err error
 	lastHelmVer := cli.GetLastHelmVersion(groupPath)
 	if rd.ArtVersion != lastHelmVer {
-		err := cli.DownloadHelmChart(groupPath, rd, &helmDownloadPa)
+		err = cli.DownloadHelmChart(groupPath, rd, &helmDownloadPa)
 		if err == nil {
 			cli.RecordHelmChartVersion(groupPath, rd)
 			doInstall = true
@@ -195,23 +196,43 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	}
 
 	if !isError {
-		cli.ResolvePreviousDiffFile(groupPath)
-		cli.MergeHelmValues(groupPath, rd)
-		cli.ReplaceTagsForDiff(groupPath, rd.Namespace)
-		if !doInstall {
-			doInstall = cli.IsValuesDiff(groupPath)
-		}
-		if !doInstall {
-			doInstall = !cli.IsFirstInstallDone(rd)
-		}
+		err = cli.ResolvePreviousDiffFile(groupPath)
+		isError = (err != nil)
 	}
 
-	if doInstall {
-		cli.SetHelmChartAppVersion(groupPath, rd)
-		cli.ReplaceTagsForInstall(groupPath, rd.Namespace)
+	if !isError {
+		err = cli.MergeHelmValues(groupPath, rd)
+		isError = (err != nil)
+	}
+
+	if !isError {
+		err = cli.ReplaceTagsForDiff(groupPath, rd.Namespace)
+		isError = (err != nil)
+	}
+
+	if !isError && !doInstall {
+		doInstall = cli.IsValuesDiff(groupPath)
+	}
+	if !isError && !doInstall {
+		doInstall = !cli.IsFirstInstallDone(rd)
+	}
+
+	if !isError && doInstall {
+		err = cli.SetHelmChartAppVersion(groupPath, rd)
+		isError = (err != nil)
+	}
+
+	if !isError && doInstall {
+		err = cli.ReplaceTagsForInstall(groupPath, rd.Namespace)
+		isError = (err != nil)
+	}
+
+	if !isError && doInstall {
 		err := cli.InstallHelmChart(groupPath, rd)
-		if err == nil {
-			cli.RecordDeployedData(groupPath, rd)
-		}
+		isError = (err != nil)
+	}
+
+	if !isError && doInstall {
+		cli.RecordDeployedData(groupPath, rd)
 	}
 }

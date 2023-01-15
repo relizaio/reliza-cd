@@ -17,14 +17,19 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 package main
 
 import (
+	"time"
+
 	"github.com/relizaio/reliza-cd/controller"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var sugar *zap.SugaredLogger
 
 func init() {
-	var logger, _ = zap.NewProduction()
+	config := zap.NewProductionConfig()
+	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
+	var logger, _ = config.Build()
 	defer logger.Sync()
 	sugar = logger.Sugar()
 }

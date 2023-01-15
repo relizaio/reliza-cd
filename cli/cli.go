@@ -25,9 +25,11 @@ import (
 	"os/exec"
 	"strings"
 	"text/template"
+	"time"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -45,9 +47,12 @@ var (
 )
 
 func init() {
-	var logger, _ = zap.NewProduction()
+	config := zap.NewProductionConfig()
+	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
+	var logger, _ = config.Build()
 	defer logger.Sync()
 	sugar = logger.Sugar()
+
 	if len(os.Getenv("MY_NAMESPACE")) > 0 {
 		MyNamespace = os.Getenv("MY_NAMESPACE")
 	} else {

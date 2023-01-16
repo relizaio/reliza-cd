@@ -92,6 +92,7 @@ func helmDataStreamToHub(existingDeployments *map[string]bool) {
 		curPaths, exists := perNamespaceActiveDepl[ns]
 		if exists && edVal {
 			curPaths.Paths = append(curPaths.Paths, "workspace/"+edKey+"/")
+			perNamespaceActiveDepl[ns] = curPaths
 		} else if edVal {
 			curPaths = cli.PathsPerNamespace{}
 			curPaths.Paths = append(curPaths.Paths, "workspace/"+edKey+"/")

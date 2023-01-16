@@ -19,6 +19,7 @@ package cli
 import (
 	"encoding/json"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 )
@@ -245,9 +246,20 @@ func GetLastHelmVersion(groupPath string) string {
 	return lastVerOut
 }
 
+func sortPathsPerNamespace(ppn *PathsPerNamespace) []string {
+	sortedPaths := ppn.Paths
+	if len(sortedPaths) > 1 {
+		sort.Slice(sortedPaths, func(i, j int) bool {
+			return sortedPaths[i] < sortedPaths[j]
+		})
+	}
+	return sortedPaths
+}
+
 func StreamHelmChartMetadataToHub(ppn *PathsPerNamespace) {
 	images := ""
-	for _, groupPath := range ppn.Paths {
+	sortedPaths := sortPathsPerNamespace(ppn)
+	for _, groupPath := range sortedPaths {
 		images += " " + getHelmChartDigest(groupPath)
 	}
 
@@ -258,6 +270,8 @@ func StreamHelmChartMetadataToHub(ppn *PathsPerNamespace) {
 	} else {
 		doStream = isHelmWatcherStreamDiff(ppn, images)
 	}
+
+	sugar.Debug("Helm images = ", images, " , doStream = ", doStream)
 
 	if doStream {
 		sendMetaCmd := RelizaCliApp + " instdata --images \"" + images + "\" --namespace " + ppn.Namespace + " --sender helmsender" + ppn.Namespace

@@ -19,6 +19,7 @@ package cli
 import (
 	"os"
 	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -81,9 +82,23 @@ func installWatcherRoutine(namespacesForWatcherStr string) {
 	shellout(HelmApp + " upgrade --install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.0 reliza/reliza-watcher")
 }
 
-func constructNamespaceStringFromMap(namespacesForWatcher *map[string]bool) string {
-	namespacenamespacesForWatcherStr := ""
+func sortNamespacesForWatcher(namespacesForWatcher *map[string]bool) []string {
+	var sortedNamespaces []string
 	for nskey := range *namespacesForWatcher {
+		sortedNamespaces = append(sortedNamespaces, nskey)
+	}
+	if len(sortedNamespaces) > 1 {
+		sort.Slice(sortedNamespaces, func(i, j int) bool {
+			return sortedNamespaces[i] < sortedNamespaces[j]
+		})
+	}
+	return sortedNamespaces
+}
+
+func constructNamespaceStringFromMap(namespacesForWatcher *map[string]bool) string {
+	sortedNamespaces := sortNamespacesForWatcher(namespacesForWatcher)
+	namespacenamespacesForWatcherStr := ""
+	for _, nskey := range sortedNamespaces {
 		namespacenamespacesForWatcherStr += nskey + "\\,"
 	}
 	re := regexp.MustCompile(`\\,$`)

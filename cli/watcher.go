@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 const (
@@ -79,7 +80,18 @@ func installWatcherRoutine(namespacesForWatcherStr string) {
 	if len(hubUri) < 1 {
 		hubUri = "https://app.relizahub.com"
 	}
-	shellout(HelmApp + " upgrade --install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.0 reliza/reliza-watcher")
+	retryLeft := 3
+	watcherInstalled := false
+	for !watcherInstalled && retryLeft > 0 {
+		_, _, err := shellout(HelmApp + " upgrade --install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.0 reliza/reliza-watcher")
+		if err == nil {
+			watcherInstalled = true
+		} else {
+			retryLeft--
+			sugar.Warn("Could not install watcher, retries left = ", retryLeft)
+			time.Sleep(2 * time.Second)
+		}
+	}
 }
 
 func sortNamespacesForWatcher(namespacesForWatcher *map[string]bool) []string {

@@ -232,6 +232,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	}
 
 	if !isError && doInstall {
+		cli.CreateNamespaceIfMissing(rd.Namespace)
 		err := cli.InstallHelmChart(groupPath, rd)
 		isError = (err != nil)
 	}

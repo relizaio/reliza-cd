@@ -332,6 +332,17 @@ func getChartNameFromDeployment(rd *RelizaDeployment) string {
 	return helmChartSplit[len(helmChartSplit)-1]
 }
 
+func CreateNamespaceIfMissing(namespace string) {
+	nsListOut, _, _ := shellout(KubectlApp + " get ns " + namespace + " | wc -l")
+	nsListOut = strings.Replace(nsListOut, "\n", "", -1)
+	nsListOutInt, err := strconv.Atoi(nsListOut)
+	if err != nil {
+		sugar.Error(err)
+	} else if nsListOutInt < 2 {
+		shellout(KubectlApp + " create ns " + namespace)
+	}
+}
+
 func DeleteObsoleteDeployment(groupPath string) {
 	recordedData, err := os.ReadFile(groupPath + RecordedDeloyedData)
 	if err != nil {

@@ -65,6 +65,7 @@ func singleLoopRun() {
 			existingDeployments[rd.Name] = true
 			processSingleDeployment(&rd)
 			namespacesForWatcher[rd.Namespace] = true
+			cli.CreateNamespaceIfMissing(rd.Namespace)
 		}
 
 		cli.InstallWatcher(&namespacesForWatcher)
@@ -146,7 +147,7 @@ func createSecretFile(filePath string) *os.File {
 	return ecrSecretFile
 }
 
-func processSingleDeployment(rd *cli.RelizaDeployment) {
+func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
 	projAuth := cli.GetProjectAuthByArtifactDigest(digest)
 	dirName := rd.Name
@@ -232,7 +233,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	}
 
 	if !isError && doInstall {
-		cli.CreateNamespaceIfMissing(rd.Namespace)
+		// cli.CreateNamespaceIfMissing(rd.Namespace)
 		err := cli.InstallHelmChart(groupPath, rd)
 		isError = (err != nil)
 	}
@@ -240,4 +241,6 @@ func processSingleDeployment(rd *cli.RelizaDeployment) {
 	if !isError && doInstall {
 		cli.RecordDeployedData(groupPath, rd)
 	}
+
+	return isError
 }

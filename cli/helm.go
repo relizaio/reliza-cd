@@ -94,9 +94,9 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 		}
 	} else {
 		if pa.Type != "NOCREDS" {
-			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --force-update --username " + pa.Login + " --password " + pa.Password)
 		} else {
-			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri)
+			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --force-update")
 		}
 		if err == nil {
 			shellout(HelmApp + " repo update " + helmChartName)

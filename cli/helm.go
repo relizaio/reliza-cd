@@ -77,7 +77,7 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 
 	// TODO flag for OCI from RH
 	useOci := false
-	if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") || strings.Contains(rd.ArtUri, ".pkg.dev") {
+	if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") || strings.Contains(rd.ArtUri, ".pkg.dev") || (strings.Contains(rd.ArtUri, ".relizahub.com") && !strings.Contains(rd.ArtUri, "/chartrepo/")) {
 		useOci = true
 	}
 	if useOci {

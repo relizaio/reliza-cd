@@ -166,6 +166,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 		ecrSecretFile := createSecretFile(ecrSecretPath)
 		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, cli.MyNamespace)
 		cli.KubectlApply(ecrSecretPath)
+		cli.WaitUntilSecretCreated("ecr-"+rd.Name, cli.MyNamespace)
 		ecrAuthPa := cli.ResolveHelmAuthSecret("ecr-" + dirName)
 		ecrToken := getEcrToken(&ecrAuthPa)
 		var paForPlainSecret cli.ProjectAuth
@@ -177,6 +178,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 		secretFile := createSecretFile(secretPath)
 		cli.ProducePlainSecretYaml(secretFile, rd, paForPlainSecret, cli.MyNamespace)
 		cli.KubectlApply(secretPath)
+		cli.WaitUntilSecretCreated(rd.Name, cli.MyNamespace)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}
 
@@ -185,6 +187,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 		secretFile := createSecretFile(secretPath)
 		cli.ProduceSecretYaml(secretFile, rd, projAuth, cli.MyNamespace)
 		cli.KubectlApply(secretPath)
+		cli.WaitUntilSecretCreated(rd.Name, cli.MyNamespace)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}
 

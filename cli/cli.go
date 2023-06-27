@@ -351,6 +351,11 @@ spec:
 	}
 }
 
+func WaitUntilSecretCreated(name string, namespace string) {
+	secretWaitCmd := "while ! " + KubectlApp + " get secret " + name + " -n " + namespace + "; do sleep 1; done"
+	shellout(secretWaitCmd)
+}
+
 type SecretTemplateResolver struct {
 	Name       string
 	Namespace  string

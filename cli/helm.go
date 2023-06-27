@@ -86,8 +86,6 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error
 		ociUri = "oci://" + ociUri
 		if pa.Type != "NOCREDS" {
 			_, _, err = shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
-		} else {
-			_, _, err = shellout(HelmApp + " registry login " + helmChartUri)
 		}
 		if err == nil {
 			_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)

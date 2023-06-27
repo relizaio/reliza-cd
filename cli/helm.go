@@ -70,7 +70,7 @@ func cleanupHelmChart(helmChartPath string) {
 
 func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error {
 	var err error
-	helmChartName := getChartNameFromDeployment(rd)
+	helmChartName := GetChartNameFromDeployment(rd)
 	helmChartUri := strings.Replace(rd.ArtUri, "/"+helmChartName, "", -1)
 
 	cleanupHelmChart(path + helmChartName)
@@ -122,7 +122,7 @@ func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 	}
 
 	if len(custValues) > 0 {
-		helmChartName := getChartNameFromDeployment(rd)
+		helmChartName := GetChartNameFromDeployment(rd)
 		customValuesFilePath := groupPath + helmChartName + "/" + CustomValuesFile
 		shellout("rm -rf " + customValuesFilePath)
 		customValuesFile, err := os.Create(customValuesFilePath)
@@ -140,7 +140,7 @@ func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 
 func MergeHelmValues(groupPath string, rd *RelizaDeployment) error {
 	hasCustomValues := resolveCustomValuesFromHub(groupPath, rd)
-	helmChartName := getChartNameFromDeployment(rd)
+	helmChartName := GetChartNameFromDeployment(rd)
 	valuesFlags := " -f " + rd.ConfigFile
 	if hasCustomValues {
 		valuesFlags += " -f " + CustomValuesFile
@@ -193,7 +193,7 @@ func IsValuesDiff(groupPath string) bool {
 
 func IsFirstInstallDone(rd *RelizaDeployment) bool {
 	isFirstInstallDone := false
-	helmChartName := getChartNameFromDeployment(rd)
+	helmChartName := GetChartNameFromDeployment(rd)
 	helmListOut, _, _ := shellout(HelmApp + " list -f \"^" + helmChartName + "$\" -n " + rd.Namespace + " | wc -l")
 	helmListOut = strings.Replace(helmListOut, "\n", "", -1)
 	helmListOutInt, err := strconv.Atoi(helmListOut)
@@ -208,14 +208,14 @@ func IsFirstInstallDone(rd *RelizaDeployment) bool {
 func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) error {
 	var err error
 	if len(rd.AppVersion) > 0 {
-		helmChartName := getChartNameFromDeployment(rd)
+		helmChartName := GetChartNameFromDeployment(rd)
 		_, _, err = shellout("sed -i \"s/^appVersion:.*$/appVersion: " + rd.AppVersion + "/\" " + groupPath + helmChartName + "/Chart.yaml")
 	}
 	return err
 }
 
 func InstallHelmChart(groupPath string, rd *RelizaDeployment) error {
-	helmChartName := getChartNameFromDeployment(rd)
+	helmChartName := GetChartNameFromDeployment(rd)
 	sugar.Info("Installing chart ", helmChartName, " for namespace ", rd.Namespace)
 	_, _, err := shellout(HelmApp + " upgrade --install " + helmChartName + " --create-namespace -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
 	return err
@@ -325,7 +325,7 @@ func recordStreamedHelmData(ppn *PathsPerNamespace, images string) {
 	nsiFile.Close()
 }
 
-func getChartNameFromDeployment(rd *RelizaDeployment) string {
+func GetChartNameFromDeployment(rd *RelizaDeployment) string {
 	helmChartSplit := strings.Split(rd.ArtUri, "/")
 	return helmChartSplit[len(helmChartSplit)-1]
 }
@@ -348,7 +348,7 @@ func DeleteObsoleteDeployment(groupPath string) {
 	} else {
 		var rd RelizaDeployment
 		json.Unmarshal(recordedData, &rd)
-		helmChartName := getChartNameFromDeployment(&rd)
+		helmChartName := GetChartNameFromDeployment(&rd)
 		sugar.Info("Uninstalling chart ", helmChartName, " from namespace ", rd.Namespace)
 		shellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
 		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + MyNamespace)

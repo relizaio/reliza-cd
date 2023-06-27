@@ -194,7 +194,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 	if rd.ArtVersion != lastHelmVer {
 		doDownloadChart = true
 	} else {
-		if _, err := os.Stat(groupPath + "Chart.yaml"); err != nil {
+		if _, err := os.Stat(groupPath + cli.GetChartNameFromDeployment(rd) + "/Chart.yaml"); err != nil {
 			doDownloadChart = true
 		}
 	}

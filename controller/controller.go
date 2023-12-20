@@ -61,16 +61,20 @@ func singleLoopRun() {
 
 		namespacesForWatcher := make(map[string]bool)
 
+		isError := false
+
 		for _, rd := range rlzDeployments {
 			existingDeployments[rd.Name] = true
-			processSingleDeployment(&rd)
+			isError = processSingleDeployment(&rd)
 			namespacesForWatcher[rd.Namespace] = true
 			cli.CreateNamespaceIfMissing(rd.Namespace)
 		}
 
 		cli.InstallWatcher(&namespacesForWatcher)
 
-		deleteObsoleteDeployments(&existingDeployments)
+		if !isError {
+			deleteObsoleteDeployments(&existingDeployments)
+		}
 
 		helmDataStreamToHub(&existingDeployments)
 	}

@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -39,10 +40,12 @@ const (
 )
 
 var (
-	sugar         *zap.SugaredLogger
-	MyNamespace   string
-	watcherImage  string
-	enableWatcher bool
+	sugar            *zap.SugaredLogger
+	SecretsNamespace string
+	RelizaNamespace  string
+	watcherImage     string
+	enableWatcher    bool
+	argoInfo         ArgoInfo
 )
 
 func init() {
@@ -53,10 +56,12 @@ func init() {
 	sugar = logger.Sugar()
 
 	if len(os.Getenv("MY_NAMESPACE")) > 0 {
-		MyNamespace = os.Getenv("MY_NAMESPACE")
+		RelizaNamespace = os.Getenv("MY_NAMESPACE")
 	} else {
-		MyNamespace = "argocd"
+		RelizaNamespace = "argocd"
 	}
+	SecretsNamespace = RelizaNamespace
+
 	if len(os.Getenv("WATCHER_IMAGE")) > 0 {
 		watcherImage = os.Getenv("WATCHER_IMAGE")
 	} else {
@@ -68,6 +73,11 @@ func init() {
 		if strings.ToLower(enableWatcherStr) == "false" {
 			enableWatcher = false
 		}
+	}
+
+	argoInfo = detectArgo()
+	if argoInfo.IsArgoDetected {
+		SecretsNamespace = argoInfo.ArgoNamespace
 	}
 }
 
@@ -95,7 +105,7 @@ func SetSealedCertificateOnTheHub(cert string) {
 	} else if err != nil {
 		doSet = true
 		sugar.Error(err)
-	} else if 0 != strings.Compare(cert, string(existingCert)) {
+	} else if strings.Compare(cert, string(existingCert)) != 0 {
 		doSet = true
 	}
 
@@ -218,13 +228,13 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 }
 
 func GetProjectAuthByArtifactDigest(artDigest string) ProjectAuth {
-	authResp, _, _ := shellout(RelizaCliApp + " cd artsecrets --artdigest " + artDigest + " --namespace " + MyNamespace)
+	authResp, _, _ := shellout(RelizaCliApp + " cd artsecrets --artdigest " + artDigest + " --namespace " + SecretsNamespace)
 	var projectAuth map[string]ProjectAuth
 	json.Unmarshal([]byte(authResp), &projectAuth)
 	return projectAuth["artifactDownloadSecrets"]
 }
 
-func ProduceSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string) {
+func ProduceSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string, helmInfo HelmRepoInfo) {
 	secretTmpl :=
 		`apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
@@ -246,6 +256,7 @@ spec:
       url: {{.Url}}
       name: {{.Name}}
       type: helm
+      enableOCI: {{printf "%q" .EnableOci}}
     metadata:
       labels:
         reliza.io/type: cdresource
@@ -258,6 +269,7 @@ spec:
 	secTmplRes.Username = projAuth.Login
 	secTmplRes.Password = projAuth.Password
 	secTmplRes.Url = rd.ArtUri
+	secTmplRes.EnableOci = strconv.FormatBool(helmInfo.UseOci)
 
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
 	if err != nil {
@@ -270,7 +282,7 @@ spec:
 	}
 }
 
-func ProducePlainSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string) {
+func ProducePlainSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string, helmInfo HelmRepoInfo) {
 	secretTmpl :=
 		`apiVersion: v1
 kind: Secret
@@ -287,7 +299,8 @@ data:
   url: {{.Url}}
   name: {{.NameBase64}}
   username: {{.Username}}
-  password: {{.Password}}`
+  password: {{.Password}}
+  enableOCI: {{printf "%q" .EnableOci}}`
 
 	var secTmplRes SecretTemplateResolver
 	secTmplRes.Name = rd.Name
@@ -296,6 +309,45 @@ data:
 	secTmplRes.Username = base64.StdEncoding.EncodeToString([]byte(projAuth.Login))
 	secTmplRes.Password = base64.StdEncoding.EncodeToString([]byte(projAuth.Password))
 	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(rd.ArtUri))
+	secTmplRes.EnableOci = base64.StdEncoding.EncodeToString([]byte(strconv.FormatBool(helmInfo.UseOci)))
+
+	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
+	if err != nil {
+		panic(err)
+	}
+
+	err = tmpl.Execute(w, secTmplRes)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func ProduceNoCredSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string, helmInfo HelmRepoInfo) {
+	secretTmpl :=
+		`apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    argocd.argoproj.io/secret-type: repository
+    reliza.io/type: cdresource
+    reliza.io/name: {{.Name}}
+  name: {{.Name}}
+  namespace: {{.Namespace}}
+type: Opaque
+data:
+  type: aGVsbQ==
+  url: {{.Url}}
+  name: {{.NameBase64}}
+  enableOCI: {{printf "%q" .EnableOci}}`
+
+	var secTmplRes SecretTemplateResolver
+	secTmplRes.Name = rd.Name
+	secTmplRes.NameBase64 = base64.StdEncoding.EncodeToString([]byte(rd.Name))
+	secTmplRes.Namespace = namespace
+	secTmplRes.Username = base64.StdEncoding.EncodeToString([]byte(projAuth.Login))
+	secTmplRes.Password = base64.StdEncoding.EncodeToString([]byte(projAuth.Password))
+	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(rd.ArtUri))
+	secTmplRes.EnableOci = base64.StdEncoding.EncodeToString([]byte(strconv.FormatBool(helmInfo.UseOci)))
 
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
 	if err != nil {
@@ -355,6 +407,31 @@ func WaitUntilSecretCreated(name string, namespace string) {
 	shellout(secretWaitCmd)
 }
 
+func IsFirstInstallDone(rd *RelizaDeployment) bool {
+	isFirstInstallDone := false
+
+	if argoInfo.IsArgoDetected {
+		isFirstInstallDone = IsFirstArgoInstallDone(rd)
+	}
+
+	if !isFirstInstallDone {
+		isFirstInstallDone = IsFirstHelmInstallDone(rd)
+	}
+
+	return isFirstInstallDone
+}
+
+func InstallApplication(groupPath string, rd *RelizaDeployment) error {
+	var err error
+
+	if argoInfo.IsArgoDetected {
+		err = installArgoApplication(groupPath, rd, argoInfo.ArgoNamespace)
+	} else {
+		err = InstallHelmChart(groupPath, rd)
+	}
+	return err
+}
+
 type SecretTemplateResolver struct {
 	Name       string
 	Namespace  string
@@ -362,6 +439,7 @@ type SecretTemplateResolver struct {
 	Password   string
 	Url        string
 	NameBase64 string
+	EnableOci  string
 }
 
 type RelizaDeployment struct {

@@ -12,7 +12,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 package cli
 
@@ -46,9 +45,9 @@ func InstallSealedCertificates() {
 
 func ResolveHelmAuthSecret(secretName string) ProjectAuth {
 	var pa ProjectAuth
-	username, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.username} -n " + MyNamespace + " | base64 -d")
-	password, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.password} -n " + MyNamespace + " | base64 -d")
-	url, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.url} -n " + MyNamespace + " | base64 -d")
+	username, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.username} -n " + SecretsNamespace + " | base64 -d")
+	password, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.password} -n " + SecretsNamespace + " | base64 -d")
+	url, _, _ := shellout(KubectlApp + " get secret " + secretName + " -o jsonpath={.data.url} -n " + SecretsNamespace + " | base64 -d")
 	pa.Type = "CREDS"
 	if strings.Contains(url, ".dkr.ecr.") && strings.Contains(url, "amazonaws.com") {
 		pa.Type = "ECR"
@@ -68,37 +67,53 @@ func cleanupHelmChart(helmChartPath string) {
 	shellout("rm -rf " + helmChartPath + "*.tgz")
 }
 
-func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth) error {
-	var err error
-	helmChartName := GetChartNameFromDeployment(rd)
-	helmChartUri := strings.Replace(rd.ArtUri, "/"+helmChartName, "", -1)
+func GetHelmRepoInfoFromDeployment(rd *RelizaDeployment) HelmRepoInfo {
+	var helmRepoInfo HelmRepoInfo
 
-	cleanupHelmChart(path + helmChartName)
-
-	// TODO flag for OCI from RH
-	useOci := false
+	helmRepoInfo.ChartName = GetChartNameFromDeployment(rd)
+	helmRepoInfo.RepoUri = strings.Replace(rd.ArtUri, "/"+helmRepoInfo.ChartName, "", -1)
+	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoUri, "https://", "", -1)
+	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoHost, "http://", "", -1)
+	helmRepoInfo.UseOci = false
 	if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") || strings.Contains(rd.ArtUri, ".pkg.dev") || (strings.Contains(rd.ArtUri, ".relizahub.com") && !strings.Contains(rd.ArtUri, "/chartrepo/")) {
-		useOci = true
+		helmRepoInfo.UseOci = true
 	}
-	if useOci {
-		ociUri := strings.Replace(rd.ArtUri, "https://", "", -1)
-		ociUri = strings.Replace(ociUri, "http://", "", -1)
-		ociUri = "oci://" + ociUri
+	if helmRepoInfo.UseOci {
+		helmRepoInfo.OciUri = "oci://" + helmRepoInfo.RepoHost + "/" + helmRepoInfo.ChartName
+	}
+
+	return helmRepoInfo
+}
+
+type HelmRepoInfo struct {
+	ChartName string
+	RepoUri   string
+	RepoHost  string
+	UseOci    bool
+	OciUri    string
+}
+
+func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth, helmRepoInfo HelmRepoInfo) error {
+	var err error
+	cleanupHelmChart(path + helmRepoInfo.ChartName)
+
+	if helmRepoInfo.UseOci {
+
 		if pa.Type != "NOCREDS" {
-			_, _, err = shellout(HelmApp + " registry login " + helmChartUri + " --username " + pa.Login + " --password " + pa.Password)
+			_, _, err = shellout(HelmApp + " registry login " + helmRepoInfo.RepoUri + " --username " + pa.Login + " --password " + pa.Password)
 		}
 		if err == nil {
-			_, _, err = shellout(HelmApp + " pull " + ociUri + " --version " + rd.ArtVersion + " -d " + path)
+			_, _, err = shellout(HelmApp + " pull " + helmRepoInfo.OciUri + " --version " + rd.ArtVersion + " -d " + path)
 		}
 	} else {
 		if pa.Type != "NOCREDS" {
-			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --force-update --username " + pa.Login + " --password " + pa.Password)
+			_, _, err = shellout(HelmApp + " repo add " + helmRepoInfo.ChartName + " " + helmRepoInfo.RepoUri + " --force-update --username " + pa.Login + " --password " + pa.Password)
 		} else {
-			_, _, err = shellout(HelmApp + " repo add " + helmChartName + " " + helmChartUri + " --force-update")
+			_, _, err = shellout(HelmApp + " repo add " + helmRepoInfo.ChartName + " " + helmRepoInfo.RepoUri + " --force-update")
 		}
 		if err == nil {
-			shellout(HelmApp + " repo update " + helmChartName)
-			shellout(HelmApp + " pull " + helmChartName + "/" + helmChartName + " --version " + rd.ArtVersion + " -d " + path)
+			shellout(HelmApp + " repo update " + helmRepoInfo.ChartName)
+			shellout(HelmApp + " pull " + helmRepoInfo.ChartName + "/" + helmRepoInfo.ChartName + " --version " + rd.ArtVersion + " -d " + path)
 		}
 	}
 	if err == nil {
@@ -191,7 +206,7 @@ func IsValuesDiff(groupPath string) bool {
 	return isDiff
 }
 
-func IsFirstInstallDone(rd *RelizaDeployment) bool {
+func IsFirstHelmInstallDone(rd *RelizaDeployment) bool {
 	isFirstInstallDone := false
 	helmChartName := GetChartNameFromDeployment(rd)
 	helmListOut, _, _ := shellout(HelmApp + " list -f \"^" + helmChartName + "$\" -n " + rd.Namespace + " | wc -l")
@@ -349,11 +364,17 @@ func DeleteObsoleteDeployment(groupPath string) {
 		var rd RelizaDeployment
 		json.Unmarshal(recordedData, &rd)
 		helmChartName := GetChartNameFromDeployment(&rd)
-		sugar.Info("Uninstalling chart ", helmChartName, " from namespace ", rd.Namespace)
-		shellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
-		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + MyNamespace)
-		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=ecr-" + rd.Name + "' -n " + MyNamespace)
-		shellout(KubectlApp + " delete secret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + MyNamespace)
+		if !argoInfo.IsArgoDetected {
+			sugar.Info("Uninstalling chart ", helmChartName, " from namespace ", rd.Namespace)
+			shellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
+		} else {
+			sugar.Info("Uninstalling argo application for release", rd.Name, " from namespace ", rd.Namespace)
+			shellout(KubectlApp + " delete application -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
+		}
+
+		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
+		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=ecr-" + rd.Name + "' -n " + SecretsNamespace)
+		shellout(KubectlApp + " delete secret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
 		os.RemoveAll(groupPath)
 	}
 }

@@ -364,7 +364,7 @@ func DeleteObsoleteDeployment(groupPath string) {
 		var rd RelizaDeployment
 		json.Unmarshal(recordedData, &rd)
 		helmChartName := GetChartNameFromDeployment(&rd)
-		if !argoInfo.IsArgoDetected {
+		if !argoInfo.IsArgoEnabled {
 			sugar.Info("Uninstalling chart ", helmChartName, " from namespace ", rd.Namespace)
 			shellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
 		} else {

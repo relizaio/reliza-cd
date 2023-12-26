@@ -36,27 +36,38 @@ type ArgoApplicationTemplateResolver struct {
 }
 type ArgoInfo struct {
 	IsArgoDetected bool
+	IsArgoEnabled  bool
 	ArgoNamespace  string
 }
 
 func detectArgo() ArgoInfo {
 	var argoInfo ArgoInfo
 	argoInfo.IsArgoDetected = false
+	argoInfo.IsArgoEnabled = false
 
-	argoDetectedOut, _, _ := shellout(KubectlApp + " get secrets -A | grep argocd-initial-admin-secret | wc -l")
-
-	argoDetectedOut = strings.Replace(argoDetectedOut, "\n", "", -1)
-	argoDetectedOutInt, err := strconv.Atoi(argoDetectedOut)
-
-	if err != nil {
-		sugar.Error(err)
-	} else if argoDetectedOutInt > 0 {
-		argoInfo.IsArgoDetected = true
+	if EnvMode != StandaloneMode {
+		argoInfo.IsArgoEnabled = true
 	}
 
-	if argoInfo.IsArgoDetected {
+	if argoInfo.IsArgoEnabled {
+		argoDetectedOut, _, _ := shellout(KubectlApp + " get pods -A | grep argocd | wc -l")
+		argoDetectedOut = strings.Replace(argoDetectedOut, "\n", "", -1)
+		argoDetectedOutInt, err := strconv.Atoi(argoDetectedOut)
+
+		if err != nil {
+			sugar.Error(err)
+		} else if argoDetectedOutInt > 0 {
+			argoInfo.IsArgoDetected = true
+		}
+
+		if !argoInfo.IsArgoDetected {
+			sugar.Error("Mode is set to `" + EnvMode + "` but no argo installation detected on the cluster!")
+			panic("Mode is set to `" + EnvMode + "` but no argo installation detected on the cluster!")
+		}
+
 		argoInfo.ArgoNamespace, _, _ = shellout(KubectlApp + " get secrets -A | grep argocd-initial-admin-secret | awk '{ print $1 }'")
 		argoInfo.ArgoNamespace = strings.Replace(argoInfo.ArgoNamespace, "\n", "", -1)
+
 	}
 
 	return argoInfo

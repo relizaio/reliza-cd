@@ -46,6 +46,12 @@ var (
 	watcherImage     string
 	enableWatcher    bool
 	argoInfo         ArgoInfo
+	EnvMode          string
+)
+
+const (
+	StandaloneMode   = "STANDALONE"
+	ExistingArgoMode = "EXISTING_ARGO"
 )
 
 func init() {
@@ -74,9 +80,16 @@ func init() {
 			enableWatcher = false
 		}
 	}
+	if len(os.Getenv("MODE")) > 0 {
+		EnvMode = os.Getenv("MODE")
+	} else {
+		EnvMode = "STANDALONE"
+	}
+
+	sugar.Info("Running Reliza CD in " + EnvMode + " mode.")
 
 	argoInfo = detectArgo()
-	if argoInfo.IsArgoDetected {
+	if argoInfo.IsArgoEnabled {
 		SecretsNamespace = argoInfo.ArgoNamespace
 	}
 }
@@ -410,7 +423,7 @@ func WaitUntilSecretCreated(name string, namespace string) {
 func IsFirstInstallDone(rd *RelizaDeployment) bool {
 	isFirstInstallDone := false
 
-	if argoInfo.IsArgoDetected {
+	if argoInfo.IsArgoEnabled {
 		isFirstInstallDone = IsFirstArgoInstallDone(rd)
 	}
 
@@ -424,7 +437,7 @@ func IsFirstInstallDone(rd *RelizaDeployment) bool {
 func InstallApplication(groupPath string, rd *RelizaDeployment) error {
 	var err error
 
-	if argoInfo.IsArgoDetected {
+	if argoInfo.IsArgoEnabled {
 		err = installArgoApplication(groupPath, rd, argoInfo.ArgoNamespace)
 	} else {
 		err = InstallHelmChart(groupPath, rd)

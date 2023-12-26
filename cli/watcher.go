@@ -12,7 +12,6 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
 */
 package cli
 
@@ -73,7 +72,7 @@ func isWatcherConfigUpdated(namespacesForWatcherStr string) bool {
 }
 
 func installWatcherRoutine(namespacesForWatcherStr string) {
-	shellout(KubectlApp + " create secret generic reliza-watcher -n " + MyNamespace + " --from-literal=reliza-api-id=" + os.Getenv("APIKEYID") + " --from-literal=reliza-api-key=" + os.Getenv("APIKEY") + " --dry-run=client -o yaml | " + KubectlApp + " apply -f -")
+	shellout(KubectlApp + " create secret generic reliza-watcher -n " + RelizaNamespace + " --from-literal=reliza-api-id=" + os.Getenv("APIKEYID") + " --from-literal=reliza-api-key=" + os.Getenv("APIKEY") + " --dry-run=client -o yaml | " + KubectlApp + " apply -f -")
 	hubUri := os.Getenv("URI")
 	if len(hubUri) < 1 {
 		hubUri = "https://app.relizahub.com"
@@ -81,7 +80,7 @@ func installWatcherRoutine(namespacesForWatcherStr string) {
 	retryLeft := 3
 	watcherInstalled := false
 	for !watcherInstalled && retryLeft > 0 {
-		_, _, err := shellout(HelmApp + " upgrade --install reliza-watcher -n " + MyNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.2 oci://registry.relizahub.com/library/reliza-watcher")
+		_, _, err := shellout(HelmApp + " upgrade --install reliza-watcher -n " + RelizaNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.2 oci://registry.relizahub.com/library/reliza-watcher")
 		if err == nil {
 			watcherInstalled = true
 		} else {

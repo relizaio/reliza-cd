@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/relizaio/reliza-cd/cli"
+	"github.com/relizaio/reliza-cd/utils"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -142,15 +143,8 @@ func collectExistingDeployments() map[string]bool {
 	return existingDeployments
 }
 
-func createSecretFile(filePath string) *os.File {
-	ecrSecretFile, err := os.Create(filePath)
-	if err != nil {
-		sugar.Error(err)
-	}
-	return ecrSecretFile
-}
-
 func processSingleDeployment(rd *cli.RelizaDeployment) bool {
+
 	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
 	projAuth := cli.GetProjectAuthByArtifactDigest(digest)
 	dirName := rd.Name
@@ -161,15 +155,14 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 
 	doInstall := false
 	isError := false
-
 	helmDownloadPa.Type = projAuth.Type
-
+	helmInfo := cli.GetHelmRepoInfoFromDeployment(rd)
 	if projAuth.Type == "ECR" {
 		ecrSecretPath := "workspace/" + dirName + "/ecrreposecret.yaml"
-		ecrSecretFile := createSecretFile(ecrSecretPath)
-		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, cli.MyNamespace)
+		ecrSecretFile := utils.CreateFile(ecrSecretPath)
+		cli.ProduceEcrSecretYaml(ecrSecretFile, rd, projAuth, cli.SecretsNamespace)
 		cli.KubectlApply(ecrSecretPath)
-		cli.WaitUntilSecretCreated("ecr-"+rd.Name, cli.MyNamespace)
+		cli.WaitUntilSecretCreated("ecr-"+rd.Name, cli.SecretsNamespace)
 		ecrAuthPa := cli.ResolveHelmAuthSecret("ecr-" + dirName)
 		ecrToken := getEcrToken(&ecrAuthPa)
 		var paForPlainSecret cli.ProjectAuth
@@ -178,22 +171,30 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 		paForPlainSecret.Type = "ECR"
 		paForPlainSecret.Url = ecrAuthPa.Url
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
-		secretFile := createSecretFile(secretPath)
-		cli.ProducePlainSecretYaml(secretFile, rd, paForPlainSecret, cli.MyNamespace)
+		secretFile := utils.CreateFile(secretPath)
+		cli.ProducePlainSecretYaml(secretFile, rd, paForPlainSecret, cli.SecretsNamespace, helmInfo)
 		cli.KubectlApply(secretPath)
-		cli.WaitUntilSecretCreated(rd.Name, cli.MyNamespace)
+		cli.WaitUntilSecretCreated(rd.Name, cli.SecretsNamespace)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}
 
 	if projAuth.Type == "CREDS" {
 		secretPath := "workspace/" + dirName + "/reposecret.yaml"
-		secretFile := createSecretFile(secretPath)
-		cli.ProduceSecretYaml(secretFile, rd, projAuth, cli.MyNamespace)
+		secretFile := utils.CreateFile(secretPath)
+		cli.ProduceSecretYaml(secretFile, rd, projAuth, cli.SecretsNamespace, helmInfo)
 		cli.KubectlApply(secretPath)
-		cli.WaitUntilSecretCreated(rd.Name, cli.MyNamespace)
+		cli.WaitUntilSecretCreated(rd.Name, cli.SecretsNamespace)
 		helmDownloadPa = cli.ResolveHelmAuthSecret(dirName)
 	}
 
+	if projAuth.Type == "NOCREDS" {
+		secretPath := "workspace/" + dirName + "/reposecret.yaml"
+		secretFile := utils.CreateFile(secretPath)
+		cli.ProduceSecretYaml(secretFile, rd, projAuth, cli.SecretsNamespace, helmInfo)
+		cli.KubectlApply(secretPath)
+		cli.WaitUntilSecretCreated(rd.Name, cli.SecretsNamespace)
+		helmDownloadPa.Url = rd.ArtUri
+	}
 	var err error
 	lastHelmVer := cli.GetLastHelmVersion(groupPath)
 	doDownloadChart := false
@@ -205,7 +206,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 		}
 	}
 	if doDownloadChart {
-		err = cli.DownloadHelmChart(groupPath, rd, &helmDownloadPa)
+		err = cli.DownloadHelmChart(groupPath, rd, &helmDownloadPa, helmInfo)
 		if err == nil {
 			cli.RecordHelmChartVersion(groupPath, rd)
 			doInstall = true
@@ -248,7 +249,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 
 	if !isError && doInstall {
 		// cli.CreateNamespaceIfMissing(rd.Namespace)
-		err := cli.InstallHelmChart(groupPath, rd)
+		err := cli.InstallApplication(groupPath, rd)
 		isError = (err != nil)
 	}
 

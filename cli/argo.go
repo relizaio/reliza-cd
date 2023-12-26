@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/relizaio/reliza-cd/utils"
 )
@@ -167,4 +168,22 @@ func installArgoApplication(groupPath string, rd *RelizaDeployment, argoNameSpac
 	CreateNamespaceIfMissing(rd.Namespace)
 	KubectlApply(applicationPath)
 	return nil
+}
+
+func installArgoCD() {
+	sugar.Info("Installing argocd")
+	shellout(HelmApp + " repo add argo https://argoproj.github.io/argo-helm")
+	shellout(HelmApp + " repo update")
+	retryLeft := 3
+	argocdInstalled := false
+	for !argocdInstalled && retryLeft > 0 {
+		_, _, err := shellout(HelmApp + " upgrade --install --create-namespace --set dex.enabled=false --set notifications.enabled=false --set applicationSet.enabled=false --set configs.params.server.insecure=true -n argocd argocd argo/argo-cd --version 5.51.6")
+		if err == nil {
+			argocdInstalled = true
+		} else {
+			retryLeft--
+			sugar.Warn("Could not install argocd, retries left = ", retryLeft)
+			time.Sleep(2 * time.Second)
+		}
+	}
 }

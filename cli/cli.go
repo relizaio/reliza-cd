@@ -52,6 +52,7 @@ var (
 const (
 	StandaloneMode   = "STANDALONE"
 	ExistingArgoMode = "EXISTING_ARGO"
+	NewArgoMode      = "NEW_ARGO"
 )
 
 func init() {
@@ -87,7 +88,9 @@ func init() {
 	}
 
 	sugar.Info("Running Reliza CD in " + EnvMode + " mode.")
-
+	if EnvMode == NewArgoMode {
+		installArgoCD()
+	}
 	argoInfo = detectArgo()
 	if argoInfo.IsArgoEnabled {
 		SecretsNamespace = argoInfo.ArgoNamespace

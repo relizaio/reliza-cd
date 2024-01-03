@@ -54,6 +54,10 @@ func loopInit() {
 func singleLoopRun() {
 	instManifest, err := cli.GetInstanceCycloneDX()
 
+	if err != nil {
+		sugar.Error(err)
+	}
+
 	if err == nil {
 		rlzDeployments := cli.ParseInstanceCycloneDXIntoDeployments(instManifest)
 
@@ -65,7 +69,11 @@ func singleLoopRun() {
 
 		for _, rd := range rlzDeployments {
 			existingDeployments[rd.Name] = true
-			isError = processSingleDeployment(&rd)
+			err = processSingleDeployment(&rd)
+			if err != nil {
+				sugar.Error(err)
+			}
+			isError = (err != nil)
 			namespacesForWatcher[rd.Namespace] = true
 			cli.CreateNamespaceIfMissing(rd.Namespace)
 		}
@@ -143,7 +151,7 @@ func collectExistingDeployments() map[string]bool {
 	return existingDeployments
 }
 
-func processSingleDeployment(rd *cli.RelizaDeployment) bool {
+func processSingleDeployment(rd *cli.RelizaDeployment) error {
 
 	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
 	projAuth := cli.GetProjectAuthByArtifactDigest(digest)
@@ -257,5 +265,5 @@ func processSingleDeployment(rd *cli.RelizaDeployment) bool {
 		cli.RecordDeployedData(groupPath, rd)
 	}
 
-	return isError
+	return err
 }

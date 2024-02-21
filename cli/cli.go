@@ -88,10 +88,18 @@ func init() {
 	}
 
 	sugar.Info("Running Reliza CD in " + EnvMode + " mode.")
-	if EnvMode == NewArgoMode {
-		installArgoCD()
-	}
 	argoInfo = detectArgo()
+	if EnvMode == NewArgoMode && !argoInfo.IsArgoDetected {
+		installArgoCD()
+	} else {
+		sugar.Info("argocd Installation found, skiping new install ..")
+	}
+
+	if !argoInfo.IsArgoDetected && EnvMode != StandaloneMode {
+		sugar.Error("Mode is set to `" + EnvMode + "` but no argo installation detected on the cluster!")
+		panic("Mode is set to `" + EnvMode + "` but no argo installation detected on the cluster!")
+	}
+
 	if argoInfo.IsArgoEnabled {
 		SecretsNamespace = argoInfo.ArgoNamespace
 	}
@@ -285,7 +293,7 @@ spec:
 	secTmplRes.Namespace = namespace
 	secTmplRes.Username = projAuth.Login
 	secTmplRes.Password = projAuth.Password
-	secTmplRes.Url = rd.ArtUri
+	secTmplRes.Url = helmInfo.RepoHost
 	secTmplRes.EnableOci = strconv.FormatBool(helmInfo.UseOci)
 
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
@@ -325,7 +333,7 @@ data:
 	secTmplRes.Namespace = namespace
 	secTmplRes.Username = base64.StdEncoding.EncodeToString([]byte(projAuth.Login))
 	secTmplRes.Password = base64.StdEncoding.EncodeToString([]byte(projAuth.Password))
-	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(rd.ArtUri))
+	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoHost))
 	secTmplRes.EnableOci = base64.StdEncoding.EncodeToString([]byte(strconv.FormatBool(helmInfo.UseOci)))
 
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
@@ -363,7 +371,7 @@ data:
 	secTmplRes.Namespace = namespace
 	secTmplRes.Username = base64.StdEncoding.EncodeToString([]byte(projAuth.Login))
 	secTmplRes.Password = base64.StdEncoding.EncodeToString([]byte(projAuth.Password))
-	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(rd.ArtUri))
+	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoHost))
 	secTmplRes.EnableOci = base64.StdEncoding.EncodeToString([]byte(strconv.FormatBool(helmInfo.UseOci)))
 
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)

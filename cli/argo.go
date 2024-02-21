@@ -51,19 +51,21 @@ func detectArgo() ArgoInfo {
 	}
 
 	if argoInfo.IsArgoEnabled {
-		argoDetectedOut, _, _ := shellout(KubectlApp + " get pods -A | grep argocd | wc -l")
-		argoDetectedOut = strings.Replace(argoDetectedOut, "\n", "", -1)
-		argoDetectedOutInt, err := strconv.Atoi(argoDetectedOut)
+		retryLeft := 3
+		for !argoInfo.IsArgoDetected && retryLeft > 0 {
+			argoDetectedOut, _, _ := shellout(KubectlApp + " get pods -A | grep argocd | wc -l")
+			argoDetectedOut = strings.Replace(argoDetectedOut, "\n", "", -1)
+			argoDetectedOutInt, err := strconv.Atoi(argoDetectedOut)
 
-		if err != nil {
-			sugar.Error(err)
-		} else if argoDetectedOutInt > 0 {
-			argoInfo.IsArgoDetected = true
-		}
-
-		if !argoInfo.IsArgoDetected {
-			sugar.Error("Mode is set to `" + EnvMode + "` but no argo installation detected on the cluster!")
-			panic("Mode is set to `" + EnvMode + "` but no argo installation detected on the cluster!")
+			if err != nil {
+				sugar.Error(err)
+			} else if argoDetectedOutInt > 0 {
+				argoInfo.IsArgoDetected = true
+			} else {
+				retryLeft--
+				sugar.Warn("Could not detect argocd, retries left = ", retryLeft)
+				time.Sleep(2 * time.Second)
+			}
 		}
 
 		argoInfo.ArgoNamespace, _, _ = shellout(KubectlApp + " get secrets -A | grep argocd-initial-admin-secret | awk '{ print $1 }'")

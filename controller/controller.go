@@ -152,7 +152,10 @@ func collectExistingDeployments() map[string]bool {
 }
 
 func processSingleDeployment(rd *cli.RelizaDeployment) error {
-
+	if cli.SecretsNamespace == "" {
+		sugar.Info("SecretNS is null")
+		panic("secretnamespace must be set by this point")
+	}
 	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
 	projAuth := cli.GetProjectAuthByArtifactDigest(digest, rd.Namespace)
 	dirName := rd.Name

@@ -91,7 +91,7 @@ func init() {
 	argoInfo = detectArgo()
 	if EnvMode == NewArgoMode && !argoInfo.IsArgoDetected {
 		installArgoCD()
-	} else {
+	} else if EnvMode == NewArgoMode && argoInfo.IsArgoDetected {
 		sugar.Info("argocd Installation found, skiping new install ..")
 	}
 

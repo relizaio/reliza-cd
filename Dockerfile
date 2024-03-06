@@ -25,7 +25,7 @@ ARG CI_ENV=noci
 ARG GIT_COMMIT=git_commit_undefined
 ARG GIT_BRANCH=git_branch_undefined
 ARG VERSION=not_versioned
-
+ENV ARGO_HELM_VERSION=5.51.6
 RUN mkdir -p /app/workspace && mkdir /app/tools
 RUN adduser -u 1000 -D apprunner && chown apprunner:apprunner -R /app
 COPY --from=build-stage --chown=apprunner:apprunner /build/reliza-cd /app/reliza-cd

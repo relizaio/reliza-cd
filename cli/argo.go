@@ -143,6 +143,9 @@ spec:
 		Version:             rd.ArtVersion,
 		MegedValuesFromFile: string(helmValues),
 	}
+	if !helmRepoInfo.UseOci {
+		argoAppTmplRes.ChartUri = helmRepoInfo.RepoUri
+	}
 	funcMap := template.FuncMap{
 		"indent": indent,
 	}
@@ -178,8 +181,9 @@ func installArgoCD() {
 	shellout(HelmApp + " repo update")
 	retryLeft := 3
 	argocdInstalled := false
+	argoVersion := os.Getenv("ARGO_HELM_VERSION")
 	for !argocdInstalled && retryLeft > 0 {
-		_, _, err := shellout(HelmApp + " upgrade --install --create-namespace --set dex.enabled=false --set notifications.enabled=false --set applicationSet.enabled=false --set configs.params.server.insecure=true -n argocd argocd argo/argo-cd --version 5.51.6")
+		_, _, err := shellout(HelmApp + " upgrade --install --create-namespace --set dex.enabled=false --set notifications.enabled=false --set applicationSet.enabled=false --set configs.params.server.insecure=true -n argocd argocd argo/argo-cd --version " + argoVersion)
 		if err == nil {
 			argocdInstalled = true
 		} else {
@@ -188,4 +192,8 @@ func installArgoCD() {
 			time.Sleep(2 * time.Second)
 		}
 	}
+	sugar.Info("Waiting for argocd installation to complete ...")
+	shellout("while ! " + KubectlApp + " get secrets -A | grep argocd-initial-admin-secret; do sleep 1; done")
+	sugar.Info("argocd installation complete.")
+
 }

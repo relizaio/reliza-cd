@@ -91,6 +91,7 @@ func init() {
 	argoInfo = detectArgo()
 	if EnvMode == NewArgoMode && !argoInfo.IsArgoDetected {
 		installArgoCD()
+		argoInfo = detectArgo()
 	} else if EnvMode == NewArgoMode && argoInfo.IsArgoDetected {
 		sugar.Info("argocd Installation found, skiping new install ..")
 	}
@@ -295,7 +296,11 @@ spec:
 	secTmplRes.Password = projAuth.Password
 	secTmplRes.Url = helmInfo.RepoHost
 	secTmplRes.EnableOci = strconv.FormatBool(helmInfo.UseOci)
-
+	if helmInfo.UseOci {
+		secTmplRes.Url = helmInfo.RepoHost
+	} else {
+		secTmplRes.Url = helmInfo.RepoUri
+	}
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
 	if err != nil {
 		panic(err)
@@ -308,6 +313,7 @@ spec:
 }
 
 func ProducePlainSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string, helmInfo HelmRepoInfo) {
+	sugar.Info("ProducePlainSecretYaml - helmInfo: ", helmInfo)
 	secretTmpl :=
 		`apiVersion: v1
 kind: Secret
@@ -326,16 +332,20 @@ data:
   username: {{.Username}}
   password: {{.Password}}
   enableOCI: {{printf "%q" .EnableOci}}`
-
+	sugar.Info("ProducePlainSecretYaml - EnableOci: ", helmInfo.UseOci)
+	sugar.Info("ProducePlainSecretYaml - Url: ", helmInfo.RepoHost)
 	var secTmplRes SecretTemplateResolver
 	secTmplRes.Name = rd.Name
 	secTmplRes.NameBase64 = base64.StdEncoding.EncodeToString([]byte(rd.Name))
 	secTmplRes.Namespace = namespace
 	secTmplRes.Username = base64.StdEncoding.EncodeToString([]byte(projAuth.Login))
 	secTmplRes.Password = base64.StdEncoding.EncodeToString([]byte(projAuth.Password))
-	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoHost))
 	secTmplRes.EnableOci = base64.StdEncoding.EncodeToString([]byte(strconv.FormatBool(helmInfo.UseOci)))
-
+	if helmInfo.UseOci {
+		secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoHost))
+	} else {
+		secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoUri))
+	}
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
 	if err != nil {
 		panic(err)
@@ -371,8 +381,12 @@ data:
 	secTmplRes.Namespace = namespace
 	secTmplRes.Username = base64.StdEncoding.EncodeToString([]byte(projAuth.Login))
 	secTmplRes.Password = base64.StdEncoding.EncodeToString([]byte(projAuth.Password))
-	secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoHost))
 	secTmplRes.EnableOci = base64.StdEncoding.EncodeToString([]byte(strconv.FormatBool(helmInfo.UseOci)))
+	if helmInfo.UseOci {
+		secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoHost))
+	} else {
+		secTmplRes.Url = base64.StdEncoding.EncodeToString([]byte(helmInfo.RepoUri))
+	}
 
 	tmpl, err := template.New("secrettmpl").Parse(secretTmpl)
 	if err != nil {

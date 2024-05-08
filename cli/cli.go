@@ -187,7 +187,7 @@ func produceAppConfigMapFromCdxComponents(cdxComponents *[]cdx.Component) map[st
 				var appConfig appConfig
 				appConfig.AppVersion = comp.Version
 				appConfig.ValuesFile = "values.yaml"
-				if len(*comp.Properties) > 0 {
+				if comp.Properties != nil && len(*comp.Properties) > 0 {
 					for _, prop := range *comp.Properties {
 						if prop.Name == "CONFIGURATION" && prop.Value != "default" {
 							appConfig.ValuesFile = prop.Value

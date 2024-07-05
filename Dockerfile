@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.19.4-alpine3.17@sha256:a9b24b67dc83b3383d22a14941c2b2b2ca6a103d805cac6820fd1355943beaf1 as build-stage
+FROM --platform=$BUILDPLATFORM golang:1.22.5-alpine3.20@sha256:8c9183f715b0b4eca05b8b3dbf59766aaedb41ec07477b132ee2891ac0110a07 as build-stage
 WORKDIR /build
 RUN apk add --update --no-cache cosign unzip 
 ENV CGO_ENABLED=0
@@ -11,15 +11,15 @@ ADD https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.4/kub
 ADD https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.4/cosign.pub ./cosign.pub
 ADD https://get.helm.sh/helm-v3.13.2-linux-${TARGETARCH}.tar.gz ./helm-v3.13.2-linux-${TARGETARCH}.tar.gz
 ADD https://storage.googleapis.com/kubernetes-release/release/v1.28.4/bin/linux/${TARGETARCH}/kubectl ./kubectl-${TARGETARCH}
-ADD https://d7ge14utcyki8.cloudfront.net/reliza-cli-download/2023.09.11/reliza-cli-2023.09.11-linux-${TARGETARCH}.zip ./reliza-cli-2023.09.11-linux-${TARGETARCH}.zip
+ADD https://d7ge14utcyki8.cloudfront.net/reliza-cli-download/2024.07.0/reliza-cli-2024.07.0-linux-${TARGETARCH}.zip ./reliza-cli-2024.07.0-linux-${TARGETARCH}.zip
 RUN sha256sum -c tools.${TARGETARCH}.sha256
 RUN cosign verify-blob --key cosign.pub --signature kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz.sig kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz
 RUN tar -xzvf kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz
 RUN tar -xzvf helm-v3.13.2-linux-${TARGETARCH}.tar.gz
-RUN unzip reliza-cli-2023.09.11-linux-${TARGETARCH}.zip
+RUN unzip reliza-cli-2024.07.0-linux-${TARGETARCH}.zip
 RUN mv kubectl-${TARGETARCH} kubectl
 
-FROM alpine:3.17.0@sha256:8914eb54f968791faf6a8638949e480fef81e697984fba772b3976835194c6d4 as release-stage
+FROM alpine:3.20@sha256:b89d9c93e9ed3597455c90a0b88a8bbb5cb7188438f70953fede212a0c4394e0 as release-stage
 ARG TARGETARCH
 ARG CI_ENV=noci
 ARG GIT_COMMIT=git_commit_undefined

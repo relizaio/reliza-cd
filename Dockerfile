@@ -19,15 +19,17 @@ RUN tar -xzvf helm-v3.13.2-linux-${TARGETARCH}.tar.gz
 RUN unzip reliza-cli-2024.07.5-linux-${TARGETARCH}.zip
 RUN mv kubectl-${TARGETARCH} kubectl
 
-FROM alpine:3.20@sha256:b89d9c93e9ed3597455c90a0b88a8bbb5cb7188438f70953fede212a0c4394e0 as release-stage
+FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 as release-stage
 ARG TARGETARCH
 ARG CI_ENV=noci
 ARG GIT_COMMIT=git_commit_undefined
 ARG GIT_BRANCH=git_branch_undefined
 ARG VERSION=not_versioned
 ENV ARGO_HELM_VERSION=5.51.6
-RUN mkdir -p /app/workspace && mkdir /app/tools
 RUN adduser -u 1000 -D apprunner && chown apprunner:apprunner -R /app
+USER apprunner
+RUN mkdir -p /app/workspace && mkdir /app/tools
+USER root
 COPY --from=build-stage --chown=apprunner:apprunner /build/reliza-cd /app/reliza-cd
 COPY --from=build-stage --chown=apprunner:apprunner /build/kubeseal /app/tools/kubeseal
 COPY --from=build-stage --chown=apprunner:apprunner /build/kubectl /app/tools/kubectl

@@ -144,7 +144,7 @@ func collectExistingDeployments() map[string]bool {
 		sugar.Error(err)
 	}
 	for _, we := range workspaceEntries {
-		if we.IsDir() && we.Name() != "watcher" {
+		if we.IsDir() && we.Name() != "watcher" && we.Name() != "lost+found" {
 			existingDeployments[we.Name()] = false
 		}
 	}

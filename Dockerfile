@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.22.5-alpine3.20@sha256:8c9183f715b0b4eca05b8b3dbf59766aaedb41ec07477b132ee2891ac0110a07 as build-stage
+FROM --platform=$BUILDPLATFORM golang:1.22.5-alpine3.20@sha256:8c9183f715b0b4eca05b8b3dbf59766aaedb41ec07477b132ee2891ac0110a07 AS build-stage
 WORKDIR /build
 RUN apk add --update --no-cache cosign unzip 
 ENV CGO_ENABLED=0
@@ -19,7 +19,7 @@ RUN tar -xzvf helm-v3.13.2-linux-${TARGETARCH}.tar.gz
 RUN unzip reliza-cli-2024.07.5-linux-${TARGETARCH}.zip
 RUN mv kubectl-${TARGETARCH} kubectl
 
-FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 as release-stage
+FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 AS release-stage
 ARG TARGETARCH
 ARG CI_ENV=noci
 ARG GIT_COMMIT=git_commit_undefined
@@ -41,9 +41,9 @@ RUN chmod 0700 /entrypoint.sh && chmod 0700 /app/tools/kubectl
 USER apprunner
 RUN echo "version=$VERSION" > /app/version && echo "commit=$GIT_COMMIT" >> /app/version && echo "branch=$GIT_BRANCH" >> /app/version
 
-LABEL org.opencontainers.image.revision $GIT_COMMIT
-LABEL git_branch $GIT_BRANCH
-LABEL ci_environment $CI_ENV
-LABEL org.opencontainers.image.version $VERSION
+LABEL org.opencontainers.image.revision=$GIT_COMMIT
+LABEL git_branch=$GIT_BRANCH
+LABEL ci_environment=$CI_ENV
+LABEL org.opencontainers.image.version=$VERSION
 
 ENTRYPOINT ["/entrypoint.sh"]

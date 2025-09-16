@@ -39,8 +39,7 @@ const (
 func InstallSealedCertificates() {
 	sugar.Info("Installing Bitnami Sealed Certificate")
 	// https://github.com/bitnami-labs/sealed-secrets#helm-chart
-	shellout(HelmApp + " repo add sealed-secrets https://bitnami-labs.github.io/sealed-secrets")
-	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller sealed-secrets/sealed-secrets")
+	shellout(HelmApp + " install sealed-secrets -n kube-system --set-string fullnameOverride=sealed-secrets-controller oci://registry.relizahub.com/library/sealed-secrets")
 }
 
 func ResolveHelmAuthSecret(secretName string) ProjectAuth {

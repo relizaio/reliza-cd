@@ -110,6 +110,7 @@ func shellout(command string) (string, string, error) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd := exec.Command(ShellToUse, "-c", command)
+	cmd.Dir = "/app" // Set working directory to /app where tools are located
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	err := cmd.Run()
@@ -169,7 +170,12 @@ func ExtractRlzDigestFromCdxDigest(cdxHash cdx.Hash) string {
 
 func GetSealedCert() string {
 	fetchCertArg := "--fetch-cert | base64 -w 0"
-	cert, _, _ := shellout(KubesealApp + " " + fetchCertArg)
+	sugar.Debug("Fetching sealed cert with command: ", KubesealApp+" "+fetchCertArg)
+	cert, stderr, err := shellout(KubesealApp + " " + fetchCertArg)
+	if err != nil {
+		sugar.Error("Error fetching sealed cert: ", err, " stderr: ", stderr)
+	}
+	sugar.Debug("Sealed cert fetched, length: ", len(cert))
 	return cert
 }
 
@@ -237,19 +243,20 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 					appVersion = appConfig.AppVersion
 					rd.AppVersion = appVersion
 				}
-				hashes := *comp.Hashes
-				if len(hashes) > 0 {
+				if comp.Hashes != nil && len(*comp.Hashes) > 0 {
+					hashes := *comp.Hashes
 					rd.ArtHash = hashes[0]
-					rlzDeployments = append(rlzDeployments, rd)
 				} else {
-					sugar.Error("Missing Helm artifact hash for = " + rd.ArtUri + ", skipping")
+					// Helm charts may not have hashes - use empty hash for public repos
+					sugar.Info("No hash found for Helm artifact = " + rd.ArtUri + ", assuming public repository")
+					rd.ArtHash = cdx.Hash{Algorithm: cdx.HashAlgoSHA256, Value: ""}
 				}
+				rlzDeployments = append(rlzDeployments, rd)
 			}
 		}
 	}
 
 	return rlzDeployments
-
 }
 
 func GetProjectAuthByArtifactDigest(artDigest, releaseNamespace string) ProjectAuth {

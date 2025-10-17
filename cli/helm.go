@@ -71,18 +71,35 @@ func GetHelmRepoInfoFromDeployment(rd *RelizaDeployment) HelmRepoInfo {
 
 	helmRepoInfo.ChartName = GetChartNameFromDeployment(rd)
 	helmRepoInfo.RepoUri = strings.Replace(rd.ArtUri, "/"+helmRepoInfo.ChartName, "", -1)
-	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoUri, "https://", "", -1)
-	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoHost, "http://", "", -1)
+	
+	// Determine if this is an OCI registry based on domain patterns or oci:// prefix
 	helmRepoInfo.UseOci = false
-	if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") || strings.Contains(rd.ArtUri, ".pkg.dev") || (strings.Contains(rd.ArtUri, ".relizahub.com") && !strings.Contains(rd.ArtUri, "/chartrepo/")) {
-		helmRepoInfo.UseOci = true
-	}
-	if helmRepoInfo.UseOci && !strings.Contains(rd.ArtUri, "oci://") {
-		helmRepoInfo.OciUri = "oci://" + helmRepoInfo.RepoHost + "/" + helmRepoInfo.ChartName
-	}
 	if strings.Contains(rd.ArtUri, "oci://") {
 		helmRepoInfo.UseOci = true
 		helmRepoInfo.OciUri = rd.ArtUri
+	} else if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") || strings.Contains(rd.ArtUri, ".pkg.dev") || (strings.Contains(rd.ArtUri, ".relizahub.com") && !strings.Contains(rd.ArtUri, "/chartrepo/")) {
+		helmRepoInfo.UseOci = true
+	}
+	
+	// Add protocol if missing
+	if !strings.HasPrefix(helmRepoInfo.RepoUri, "http://") && !strings.HasPrefix(helmRepoInfo.RepoUri, "https://") && !strings.HasPrefix(helmRepoInfo.RepoUri, "oci://") {
+		if helmRepoInfo.UseOci {
+			// For OCI registries without protocol, add oci://
+			helmRepoInfo.RepoUri = "oci://" + helmRepoInfo.RepoUri
+			helmRepoInfo.OciUri = helmRepoInfo.RepoUri + "/" + helmRepoInfo.ChartName
+		} else {
+			// For traditional Helm repos without protocol, add https://
+			helmRepoInfo.RepoUri = "https://" + helmRepoInfo.RepoUri
+		}
+	}
+	
+	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoUri, "https://", "", -1)
+	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoHost, "http://", "", -1)
+	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoHost, "oci://", "", -1)
+	
+	// Construct OciUri if needed and not already set
+	if helmRepoInfo.UseOci && helmRepoInfo.OciUri == "" {
+		helmRepoInfo.OciUri = "oci://" + helmRepoInfo.RepoHost + "/" + helmRepoInfo.ChartName
 	}
 
 	return helmRepoInfo
@@ -236,6 +253,9 @@ func InstallHelmChart(groupPath string, rd *RelizaDeployment) error {
 	helmChartName := GetChartNameFromDeployment(rd)
 	sugar.Info("Installing chart ", helmChartName, " for namespace ", rd.Namespace)
 	_, _, err := shellout(HelmApp + " upgrade --install " + helmChartName + " --create-namespace -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
+	if err == nil {
+		sugar.Info("Successfully deployed chart ", helmChartName, " version ", rd.ArtVersion, " to namespace ", rd.Namespace)
+	}
 	return err
 }
 

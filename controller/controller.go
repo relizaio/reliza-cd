@@ -38,8 +38,11 @@ func init() {
 }
 
 func loopInit() {
+	sugar.Info("Starting loopInit - getting sealed cert")
 	sealedCert := cli.GetSealedCert()
+	sugar.Info("Got sealed cert, length: ", len(sealedCert))
 	if len(sealedCert) < 1 {
+		sugar.Info("Sealed cert is empty, installing sealed certificates")
 		cli.InstallSealedCertificates()
 		for len(sealedCert) < 1 {
 			sealedCert = cli.GetSealedCert()
@@ -48,7 +51,9 @@ func loopInit() {
 		sugar.Info("Installed Bitnami Sealed Certificates")
 	}
 
+	sugar.Info("Setting sealed certificate on the hub")
 	cli.SetSealedCertificateOnTheHub(sealedCert)
+	sugar.Info("Completed loopInit")
 }
 
 func singleLoopRun() {
@@ -156,8 +161,15 @@ func processSingleDeployment(rd *cli.RelizaDeployment) error {
 		sugar.Info("SecretNS is null")
 		panic("secretnamespace must be set by this point")
 	}
-	digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
-	projAuth := cli.GetProjectAuthByArtifactDigest(digest, rd.Namespace)
+	var projAuth cli.ProjectAuth
+	if rd.ArtHash.Value == "" {
+		// No hash means public repo, assume NOCREDS
+		sugar.Info("No artifact hash for " + rd.ArtUri + ", assuming public repository with no credentials")
+		projAuth.Type = "NOCREDS"
+	} else {
+		digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
+		projAuth = cli.GetProjectAuthByArtifactDigest(digest, rd.Namespace)
+	}
 	dirName := rd.Name
 	os.MkdirAll("workspace/"+dirName, 0700)
 	groupPath := "workspace/" + dirName + "/"

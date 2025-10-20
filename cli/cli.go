@@ -203,41 +203,35 @@ func produceAppConfigMapFromCdxComponents(cdxComponents *[]cdx.Component) map[st
 			if comp.Type == "application" {
 				var appConfig appConfig
 				appConfig.ValuesFile = "values.yaml"
-				
-				// Check for version-related properties
-				containerSafeVersion := ""
+
+				// Check for HELM_APP_VERSION property (for external Helm charts)
 				helmAppVersion := ""
 				if comp.Properties != nil && len(*comp.Properties) > 0 {
 					for _, prop := range *comp.Properties {
 						if prop.Name == "CONFIGURATION" && prop.Value != "default" {
 							appConfig.ValuesFile = prop.Value
 						} else if prop.Name == "HELM_APP_VERSION" {
-							// HELM_APP_VERSION is only for helm charts
+							// HELM_APP_VERSION: For external Helm charts (e.g., Jenkins 2.375.2)
+							// This is the actual application version inside the Helm chart
 							helmAppVersion = prop.Value
-						} else if prop.Name == "reliza:containerSafeVersion" {
-							// reliza:containerSafeVersion is for containers
-							containerSafeVersion = prop.Value
 						}
 					}
 				}
-				
-				// Priority: reliza:containerSafeVersion > HELM_APP_VERSION > formatted version
-				if containerSafeVersion != "" {
-					// Use the container-safe version from reliza-hub (for containers)
-					appConfig.AppVersion = containerSafeVersion
-				} else if helmAppVersion != "" {
-					// Use HELM_APP_VERSION (for helm charts)
+
+				// Set appVersion for Chart.yaml metadata
+				if helmAppVersion != "" {
+					// External Helm charts: use the extracted app version (e.g., Jenkins 2.375.2)
 					appConfig.AppVersion = helmAppVersion
 				} else if comp.Version != "" {
-					// Format the component version to be container-safe
-					appConfig.AppVersion = dockerTagSafeVersion(comp.Version)
-					sugar.Info(fmt.Sprintf("Formatted version %s to container-safe version %s for component %s", comp.Version, appConfig.AppVersion, comp.Name))
+					// Your own products: use the product version directly (e.g., Reliza 25.03.0.13)
+					// No formatting needed - this is just metadata in Chart.yaml
+					appConfig.AppVersion = comp.Version
 				} else {
 					// No version found - this is an error condition
-					sugar.Error(fmt.Sprintf("No version found for application component %s (group: %s). Cannot proceed without a valid container version.", comp.Name, comp.Group))
+					sugar.Error(fmt.Sprintf("No version found for application component %s (group: %s). Cannot proceed without a valid version.", comp.Name, comp.Group))
 					os.Exit(1)
 				}
-				
+
 				deplName := resolveDeploymentNameFromString(comp.Group)
 				appConfigMap[deplName] = appConfig
 			}

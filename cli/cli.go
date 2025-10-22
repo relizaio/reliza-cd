@@ -277,10 +277,10 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 					hashes := *comp.Hashes
 					rd.ArtHash = hashes[0]
 				} else {
-					// Helm charts may not have hashes - use empty hash for public repos
-					sugar.Info("No hash found for Helm artifact = " + rd.ArtUri + ", assuming public repository")
-					rd.ArtHash = cdx.Hash{Algorithm: cdx.HashAlgoSHA256, Value: ""}
-				}
+				// Helm charts may not have hashes - use empty hash for public repos
+				sugar.Debug("No hash found for Helm artifact = " + rd.ArtUri + ", assuming public repository")
+				rd.ArtHash = cdx.Hash{Algorithm: cdx.HashAlgoSHA256, Value: ""}
+			}
 				rlzDeployments = append(rlzDeployments, rd)
 			}
 		}

@@ -169,7 +169,6 @@ func processSingleDeployment(rd *cli.RelizaDeployment) error {
 	var projAuth cli.ProjectAuth
 	if rd.ArtHash.Value == "" {
 		// No hash means public repo, assume NOCREDS
-		sugar.Info("No artifact hash for " + rd.ArtUri + ", assuming public repository with no credentials")
 		projAuth.Type = "NOCREDS"
 	} else {
 		digest := cli.ExtractRlzDigestFromCdxDigest(rd.ArtHash)
@@ -273,6 +272,12 @@ func processSingleDeployment(rd *cli.RelizaDeployment) error {
 
 	if !isError && doInstall {
 		err = cli.ReplaceTagsForInstall(groupPath, rd.Namespace)
+		isError = (err != nil)
+	}
+
+	if !isError && doInstall {
+		// Validate install values for unsupported patterns before deployment
+		err = cli.ValidateInstallValues(groupPath, rd)
 		isError = (err != nil)
 	}
 

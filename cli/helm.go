@@ -17,6 +17,7 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"sort"
 	"strconv"
@@ -211,6 +212,34 @@ func ReplaceTagsForInstall(groupPath string, namespace string) error {
 	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + InstallValues + " --resolveprops=true --namespace " + namespace
 	_, _, err := shellout(replaceTagsCmd)
 	return err
+}
+
+func ValidateInstallValues(groupPath string, rd *RelizaDeployment) error {
+	// Check for malformed image references (digest+tag pattern)
+	// Pattern: repository contains @sha256: AND there's a separate tag field
+	checkCmd := "grep -E 'repository:.*@sha256:.*' " + groupPath + InstallValues + " | head -1"
+	repoWithDigest, _, _ := shellout(checkCmd)
+	
+	if len(repoWithDigest) > 0 {
+		// Found repository with digest, check if there's also a tag field nearby
+		checkTagCmd := "grep -A 2 -E 'repository:.*@sha256:' " + groupPath + InstallValues + " | grep -E '^[[:space:]]*tag:' | head -1"
+		tagField, _, _ := shellout(checkTagCmd)
+		
+		if len(tagField) > 0 {
+			sugar.Errorw("Detected unsupported image reference pattern in helm values",
+				"bundle", rd.Bundle,
+				"version", rd.ArtVersion,
+				"namespace", rd.Namespace,
+				"issue", "Chart uses both digest (@sha256:...) in repository field AND a separate tag field. This creates invalid image references like 'image:tag@sha256:digest:tag'",
+				"recommendation", "This chart (e.g., Harbor) is not compatible with Reliza CD's tag replacement. Use a different chart or modify the image reference format",
+				"valuesFile", groupPath + InstallValues)
+			sugar.Debug("Repository with digest: ", repoWithDigest)
+			sugar.Debug("Tag field: ", tagField)
+			// Return error to prevent deployment
+			return errors.New("chart uses unsupported image reference pattern (digest+tag)")
+		}
+	}
+	return nil
 }
 
 func IsValuesDiff(groupPath string) bool {

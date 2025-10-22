@@ -139,6 +139,15 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth, helmR
 	if err == nil {
 		_, _, err = shellout("tar -xzvf " + path + "*.tgz -C " + path)
 	}
+	if err != nil {
+		sugar.Errorw("Failed to download helm chart",
+			"bundle", rd.Bundle,
+			"version", rd.ArtVersion,
+			"chartName", helmRepoInfo.ChartName,
+			"namespace", rd.Namespace,
+			"repoUri", helmRepoInfo.RepoUri,
+			"error", err)
+	}
 	return err
 }
 

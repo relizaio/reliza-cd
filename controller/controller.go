@@ -76,12 +76,12 @@ func singleLoopRun() {
 			existingDeployments[rd.Name] = true
 			err = processSingleDeployment(&rd)
 			if err != nil {
-				sugar.Errorw("Error processing deployment",
+				// Errors already logged in processSingleDeployment with full context
+				sugar.Infow("Skipping deployment due to error",
 					"bundle", rd.Bundle,
 					"version", rd.ArtVersion,
 					"namespace", rd.Namespace,
-					"deploymentName", rd.Name,
-					"error", err)
+					"deploymentName", rd.Name)
 			}
 			isError = (err != nil)
 			namespacesForWatcher[rd.Namespace] = true
@@ -239,12 +239,7 @@ func processSingleDeployment(rd *cli.RelizaDeployment) error {
 			cli.RecordHelmChartVersion(groupPath, rd)
 			doInstall = true
 		} else {
-			sugar.Errorw("Failed to download helm chart for deployment",
-				"bundle", rd.Bundle,
-				"version", rd.ArtVersion,
-				"namespace", rd.Namespace,
-				"deploymentName", rd.Name,
-				"error", err)
+			// Error already logged in DownloadHelmChart with full context
 			isError = true
 		}
 	}

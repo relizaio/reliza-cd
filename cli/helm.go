@@ -121,7 +121,7 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth, helmR
 	if helmRepoInfo.UseOci {
 
 		if pa.Type != "NOCREDS" {
-			_, _, err = shellout(HelmApp + " registry login " + helmRepoInfo.RepoUri + " --username " + pa.Login + " --password " + pa.Password)
+			_, _, err = shellout(HelmApp + " registry login " + helmRepoInfo.RepoHost + " --username " + pa.Login + " --password " + pa.Password)
 		}
 		if err == nil {
 			_, _, err = shellout(HelmApp + " pull " + helmRepoInfo.OciUri + " --version " + rd.ArtVersion + " -d " + path)
@@ -418,7 +418,18 @@ func CreateNamespaceIfMissing(namespace string) {
 }
 
 func DeleteObsoleteDeployment(groupPath string) {
-	recordedData, err := os.ReadFile(groupPath + RecordedDeloyedData)
+	recordedDataPath := groupPath + RecordedDeloyedData
+	
+	// Check if recorded deployment data file exists
+	if _, err := os.Stat(recordedDataPath); os.IsNotExist(err) {
+		sugar.Warnw("Recorded deployment data not found for obsolete deployment, skipping cleanup",
+			"path", recordedDataPath)
+		// Still remove the directory to clean up
+		os.RemoveAll(groupPath)
+		return
+	}
+	
+	recordedData, err := os.ReadFile(recordedDataPath)
 	if err != nil {
 		sugar.Error(err)
 	} else {

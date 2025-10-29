@@ -9,13 +9,13 @@ RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build
 ADD https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.4/kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz ./kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz
 ADD https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.4/kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz.sig ./kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz.sig
 ADD https://github.com/bitnami-labs/sealed-secrets/releases/download/v0.24.4/cosign.pub ./cosign.pub
-ADD https://get.helm.sh/helm-v3.13.2-linux-${TARGETARCH}.tar.gz ./helm-v3.13.2-linux-${TARGETARCH}.tar.gz
+ADD https://get.helm.sh/helm-v3.19.0-linux-${TARGETARCH}.tar.gz ./helm-v3.19.0-linux-${TARGETARCH}.tar.gz
 ADD https://storage.googleapis.com/kubernetes-release/release/v1.28.4/bin/linux/${TARGETARCH}/kubectl ./kubectl-${TARGETARCH}
 ADD https://d7ge14utcyki8.cloudfront.net/reliza-cli-download/2024.07.10/reliza-cli-2024.07.10-linux-${TARGETARCH}.zip ./reliza-cli-2024.07.10-linux-${TARGETARCH}.zip
 RUN sha256sum -c tools.${TARGETARCH}.sha256
 RUN cosign verify-blob --key cosign.pub --signature kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz.sig kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz
 RUN tar -xzvf kubeseal-0.24.4-linux-${TARGETARCH}.tar.gz
-RUN tar -xzvf helm-v3.13.2-linux-${TARGETARCH}.tar.gz
+RUN tar -xzvf helm-v3.19.0-linux-${TARGETARCH}.tar.gz
 RUN unzip reliza-cli-2024.07.10-linux-${TARGETARCH}.zip
 RUN mv kubectl-${TARGETARCH} kubectl
 

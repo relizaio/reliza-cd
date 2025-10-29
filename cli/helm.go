@@ -17,7 +17,6 @@ package cli
 
 import (
 	"encoding/json"
-	"errors"
 	"os"
 	"sort"
 	"strconv"
@@ -72,7 +71,7 @@ func GetHelmRepoInfoFromDeployment(rd *RelizaDeployment) HelmRepoInfo {
 
 	helmRepoInfo.ChartName = GetChartNameFromDeployment(rd)
 	helmRepoInfo.RepoUri = strings.Replace(rd.ArtUri, "/"+helmRepoInfo.ChartName, "", -1)
-	
+
 	// Determine if this is an OCI registry based on domain patterns or oci:// prefix
 	helmRepoInfo.UseOci = false
 	if strings.Contains(rd.ArtUri, "oci://") {
@@ -81,7 +80,7 @@ func GetHelmRepoInfoFromDeployment(rd *RelizaDeployment) HelmRepoInfo {
 	} else if strings.Contains(rd.ArtUri, "azurecr.io") || strings.Contains(rd.ArtUri, ".ecr.") || strings.Contains(rd.ArtUri, ".pkg.dev") || (strings.Contains(rd.ArtUri, ".relizahub.com") && !strings.Contains(rd.ArtUri, "/chartrepo/")) {
 		helmRepoInfo.UseOci = true
 	}
-	
+
 	// Add protocol if missing
 	if !strings.HasPrefix(helmRepoInfo.RepoUri, "http://") && !strings.HasPrefix(helmRepoInfo.RepoUri, "https://") && !strings.HasPrefix(helmRepoInfo.RepoUri, "oci://") {
 		if helmRepoInfo.UseOci {
@@ -93,11 +92,11 @@ func GetHelmRepoInfoFromDeployment(rd *RelizaDeployment) HelmRepoInfo {
 			helmRepoInfo.RepoUri = "https://" + helmRepoInfo.RepoUri
 		}
 	}
-	
+
 	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoUri, "https://", "", -1)
 	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoHost, "http://", "", -1)
 	helmRepoInfo.RepoHost = strings.Replace(helmRepoInfo.RepoHost, "oci://", "", -1)
-	
+
 	// Construct OciUri if needed and not already set
 	if helmRepoInfo.UseOci && helmRepoInfo.OciUri == "" {
 		helmRepoInfo.OciUri = "oci://" + helmRepoInfo.RepoHost + "/" + helmRepoInfo.ChartName
@@ -212,34 +211,6 @@ func ReplaceTagsForInstall(groupPath string, namespace string) error {
 	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + InstallValues + " --resolveprops=true --namespace " + namespace
 	_, _, err := shellout(replaceTagsCmd)
 	return err
-}
-
-func ValidateInstallValues(groupPath string, rd *RelizaDeployment) error {
-	// Check for malformed image references (digest+tag pattern)
-	// Pattern: repository contains @sha256: AND there's a separate tag field
-	checkCmd := "grep -E 'repository:.*@sha256:.*' " + groupPath + InstallValues + " | head -1"
-	repoWithDigest, _, _ := shellout(checkCmd)
-	
-	if len(repoWithDigest) > 0 {
-		// Found repository with digest, check if there's also a tag field nearby
-		checkTagCmd := "grep -A 2 -E 'repository:.*@sha256:' " + groupPath + InstallValues + " | grep -E '^[[:space:]]*tag:' | head -1"
-		tagField, _, _ := shellout(checkTagCmd)
-		
-		if len(tagField) > 0 {
-			sugar.Errorw("Detected unsupported image reference pattern in helm values",
-				"bundle", rd.Bundle,
-				"version", rd.ArtVersion,
-				"namespace", rd.Namespace,
-				"issue", "Chart uses both digest (@sha256:...) in repository field AND a separate tag field. This creates invalid image references like 'image:tag@sha256:digest:tag'",
-				"recommendation", "This chart (e.g., Harbor) is not compatible with Reliza CD's tag replacement. Use a different chart or modify the image reference format",
-				"valuesFile", groupPath + InstallValues)
-			sugar.Debug("Repository with digest: ", repoWithDigest)
-			sugar.Debug("Tag field: ", tagField)
-			// Return error to prevent deployment
-			return errors.New("chart uses unsupported image reference pattern (digest+tag)")
-		}
-	}
-	return nil
 }
 
 func IsValuesDiff(groupPath string) bool {
@@ -419,7 +390,7 @@ func CreateNamespaceIfMissing(namespace string) {
 
 func DeleteObsoleteDeployment(groupPath string) {
 	recordedDataPath := groupPath + RecordedDeloyedData
-	
+
 	// Check if recorded deployment data file exists
 	if _, err := os.Stat(recordedDataPath); os.IsNotExist(err) {
 		sugar.Warnw("Recorded deployment data not found for obsolete deployment, skipping cleanup",
@@ -428,7 +399,7 @@ func DeleteObsoleteDeployment(groupPath string) {
 		os.RemoveAll(groupPath)
 		return
 	}
-	
+
 	recordedData, err := os.ReadFile(recordedDataPath)
 	if err != nil {
 		sugar.Error(err)

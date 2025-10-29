@@ -276,12 +276,6 @@ func processSingleDeployment(rd *cli.RelizaDeployment) error {
 	}
 
 	if !isError && doInstall {
-		// Validate install values for unsupported patterns before deployment
-		err = cli.ValidateInstallValues(groupPath, rd)
-		isError = (err != nil)
-	}
-
-	if !isError && doInstall {
 		// cli.CreateNamespaceIfMissing(rd.Namespace)
 		err := cli.InstallApplication(groupPath, rd)
 		isError = (err != nil)

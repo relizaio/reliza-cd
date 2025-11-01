@@ -241,7 +241,15 @@ func ReplaceTagsForDiff(groupPath string, namespace string) error {
 
 func ReplaceTagsForInstall(groupPath string, namespace string) error {
 	replaceTagsCmd := RelizaCliApp + " replacetags --infile " + groupPath + WorkValues + " --outfile " + groupPath + InstallValues + " --resolveprops=true --namespace " + namespace
-	_, _, err := shellout(replaceTagsCmd)
+	sugar.Info("Replacing tags for install, command: ", replaceTagsCmd)
+	stdout, stderr, err := shellout(replaceTagsCmd)
+	if err != nil {
+		sugar.Error("Failed to replace tags: ", err)
+		sugar.Error("stdout: ", stdout)
+		sugar.Error("stderr: ", stderr)
+	} else {
+		sugar.Info("✅ Tags replaced successfully, install-values.yaml created")
+	}
 	return err
 }
 
@@ -293,9 +301,16 @@ func SetHelmChartAppVersion(groupPath string, rd *RelizaDeployment) error {
 func InstallHelmChart(groupPath string, rd *RelizaDeployment) error {
 	helmChartName := GetChartNameFromDeployment(rd)
 	sugar.Info("Installing chart ", helmChartName, " for namespace ", rd.Namespace)
-	_, _, err := shellout(HelmApp + " upgrade --install " + helmChartName + " --create-namespace -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName)
+	helmCmd := HelmApp + " upgrade --install " + helmChartName + " --create-namespace -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName
+	sugar.Info("Helm install command: ", helmCmd)
+	sugar.Info("Using values file: ", groupPath+InstallValues)
+	stdout, stderr, err := shellout(helmCmd)
 	if err == nil {
 		sugar.Info("Successfully deployed chart ", helmChartName, " version ", rd.ArtVersion, " to namespace ", rd.Namespace)
+	} else {
+		sugar.Error("Failed to install chart: ", err)
+		sugar.Error("stdout: ", stdout)
+		sugar.Error("stderr: ", stderr)
 	}
 	return err
 }

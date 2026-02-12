@@ -16,7 +16,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 package controller
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -149,7 +148,7 @@ func deleteObsoleteDeployments(existingDeployments *map[string]bool) {
 
 func collectExistingDeployments() map[string]bool {
 	existingDeployments := make(map[string]bool)
-	workspaceEntries, err := ioutil.ReadDir("workspace")
+	workspaceEntries, err := os.ReadDir("workspace")
 	if err != nil {
 		sugar.Error(err)
 	}

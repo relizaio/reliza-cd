@@ -13,7 +13,7 @@ ADD https://get.helm.sh/helm-v3.19.0-linux-${TARGETARCH}.tar.gz ./helm-v3.19.0-l
 ADD https://dl.k8s.io/v1.33.7/kubernetes-client-linux-${TARGETARCH}.tar.gz ./kubernetes-client-linux-${TARGETARCH}.tar.gz
 ADD https://d7ge14utcyki8.cloudfront.net/reliza-cli-download/2024.07.10/reliza-cli-2024.07.10-linux-${TARGETARCH}.zip ./reliza-cli-2024.07.10-linux-${TARGETARCH}.zip
 RUN sha256sum -c tools.${TARGETARCH}.sha256
-RUN sha256sum -c tools.${TARGETARCH}.sha512
+RUN sha512sum -c tools.${TARGETARCH}.sha512
 RUN cosign verify-blob --key cosign.pub --signature kubeseal-0.35.0-linux-${TARGETARCH}.tar.gz.sig kubeseal-0.35.0-linux-${TARGETARCH}.tar.gz
 RUN tar -xzvf kubeseal-0.35.0-linux-${TARGETARCH}.tar.gz
 RUN tar -xzvf helm-v3.19.0-linux-${TARGETARCH}.tar.gz

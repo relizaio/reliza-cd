@@ -13,3 +13,13 @@ DRY_RUN=true
 ```
 
 In this mode, Reliza CD will log all mutating helm and kubectl commands (install, upgrade, uninstall, delete, create namespace) but will not execute them. Read-only operations such as chart downloads, value merging, and metadata streaming will continue to run normally.
+
+## Debug Logging
+
+To enable debug level logging, set the `LOG_LEVEL` environment variable to `debug`:
+
+```
+LOG_LEVEL=debug
+```
+
+This will output additional diagnostic information such as custom values resolution details and other internal state.

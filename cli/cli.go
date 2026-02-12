@@ -61,6 +61,9 @@ const (
 func init() {
 	config := zap.NewProductionConfig()
 	config.EncoderConfig.EncodeTime = zapcore.TimeEncoderOfLayout(time.RFC3339)
+	if strings.ToLower(os.Getenv("LOG_LEVEL")) == "debug" {
+		config.Level.SetLevel(zap.DebugLevel)
+	}
 	var logger, _ = config.Build()
 	defer logger.Sync()
 	sugar = logger.Sugar()

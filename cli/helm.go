@@ -154,8 +154,8 @@ func DownloadHelmChart(path string, rd *RelizaDeployment, pa *ProjectAuth, helmR
 func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 	present := false
 	custValCmd := RelizaCliApp + " instprops --property CUSTOM_VALUES --usenamespacebundle=true --namespace " + rd.Namespace + " --bundle '" + rd.Bundle + "'"
-	sugar.Info("Fetching CUSTOM_VALUES for bundle: ", rd.Bundle, " namespace: ", rd.Namespace)
-	sugar.Info("Command: ", custValCmd)
+	sugar.Debug("Fetching CUSTOM_VALUES for bundle: ", rd.Bundle, " namespace: ", rd.Namespace)
+	sugar.Debug("Command: ", custValCmd)
 	propsFromCli, stderr, err := shellout(custValCmd)
 	if err != nil {
 		sugar.Error("Failed to fetch CUSTOM_VALUES: ", err)
@@ -174,15 +174,15 @@ func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 	if len(secretPropsResp.Properties) > 0 {
 		prop := secretPropsResp.Properties[0]
 		custValues = prop.Value
-		sugar.Info("✅ CUSTOM_VALUES found, length: ", len(custValues), " bytes")
+		sugar.Debug("CUSTOM_VALUES found, length: ", len(custValues), " bytes")
 	} else {
-		sugar.Info("⚠️  No CUSTOM_VALUES found for bundle: ", rd.Bundle, " namespace: ", rd.Namespace)
+		sugar.Debug("No CUSTOM_VALUES found for bundle: ", rd.Bundle, " namespace: ", rd.Namespace)
 	}
 
 	if len(custValues) > 0 {
 		helmChartName := GetChartNameFromDeployment(rd)
 		customValuesFilePath := groupPath + helmChartName + "/" + CustomValuesFile
-		sugar.Info("Writing CUSTOM_VALUES to: ", customValuesFilePath)
+		sugar.Debug("Writing CUSTOM_VALUES to: ", customValuesFilePath)
 		shellout("rm -rf " + customValuesFilePath)
 		customValuesFile, err := os.Create(customValuesFilePath)
 		if err != nil {
@@ -192,7 +192,7 @@ func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 			if writeErr != nil {
 				sugar.Error("Failed to write custom values: ", writeErr)
 			} else {
-				sugar.Info("✅ Wrote ", bytesWritten, " bytes to custom-values.yaml")
+				sugar.Debug("Wrote ", bytesWritten, " bytes to custom-values.yaml")
 			}
 			customValuesFile.Close()
 			present = true
@@ -209,9 +209,9 @@ func MergeHelmValues(groupPath string, rd *RelizaDeployment) error {
 	valuesFlags := " -f " + rd.ConfigFile
 	if hasCustomValues {
 		valuesFlags += " -f " + CustomValuesFile
-		sugar.Info("✅ Merging with CUSTOM_VALUES")
+		sugar.Debug("Merging with CUSTOM_VALUES")
 	} else {
-		sugar.Info("⚠️  No CUSTOM_VALUES to merge, using default values only")
+		sugar.Debug("No CUSTOM_VALUES to merge, using default values only")
 	}
 	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + valuesFlags + " --outfile " + groupPath + WorkValues
 	sugar.Info("Merge command: ", helmValuesCmd)

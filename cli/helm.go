@@ -203,7 +203,7 @@ func resolveCustomValuesFromHub(groupPath string, rd *RelizaDeployment) bool {
 }
 
 func MergeHelmValues(groupPath string, rd *RelizaDeployment) error {
-	sugar.Info("=== Starting Helm Values Merge ===")
+	sugar.Debug("=== Starting Helm Values Merge ===")
 	hasCustomValues := resolveCustomValuesFromHub(groupPath, rd)
 	helmChartName := GetChartNameFromDeployment(rd)
 	valuesFlags := " -f " + rd.ConfigFile
@@ -214,14 +214,14 @@ func MergeHelmValues(groupPath string, rd *RelizaDeployment) error {
 		sugar.Debug("No CUSTOM_VALUES to merge, using default values only")
 	}
 	helmValuesCmd := RelizaCliApp + " helmvalues " + groupPath + helmChartName + valuesFlags + " --outfile " + groupPath + WorkValues
-	sugar.Info("Merge command: ", helmValuesCmd)
+	sugar.Debug("Merge command: ", helmValuesCmd)
 	stdout, stderr, err := shellout(helmValuesCmd)
 	if err != nil {
 		sugar.Error("Failed to merge helm values: ", err)
 		sugar.Error("stdout: ", stdout)
 		sugar.Error("stderr: ", stderr)
 	} else {
-		sugar.Info("✅ Helm values merged successfully")
+		sugar.Debug("✅ Helm values merged successfully")
 	}
 	return err
 }

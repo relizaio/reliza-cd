@@ -72,7 +72,7 @@ func isWatcherConfigUpdated(namespacesForWatcherStr string) bool {
 }
 
 func installWatcherRoutine(namespacesForWatcherStr string) {
-	shellout(KubectlApp + " create secret generic reliza-watcher -n " + RelizaNamespace + " --from-literal=reliza-api-id=" + os.Getenv("APIKEYID") + " --from-literal=reliza-api-key=" + os.Getenv("APIKEY") + " --dry-run=client -o yaml | " + KubectlApp + " apply -f -")
+	dryRunShellout(KubectlApp + " create secret generic reliza-watcher -n " + RelizaNamespace + " --from-literal=reliza-api-id=" + os.Getenv("APIKEYID") + " --from-literal=reliza-api-key=" + os.Getenv("APIKEY") + " --dry-run=client -o yaml | " + KubectlApp + " apply -f -")
 	hubUri := os.Getenv("URI")
 	if len(hubUri) < 1 {
 		hubUri = "https://app.relizahub.com"
@@ -80,7 +80,7 @@ func installWatcherRoutine(namespacesForWatcherStr string) {
 	retryLeft := 3
 	watcherInstalled := false
 	for !watcherInstalled && retryLeft > 0 {
-		_, _, err := shellout(HelmApp + " upgrade --install reliza-watcher -n " + RelizaNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.2 oci://registry.relizahub.com/library/reliza-watcher")
+		_, _, err := dryRunShellout(HelmApp + " upgrade --install reliza-watcher -n " + RelizaNamespace + " --set namespace=\"" + namespacesForWatcherStr + "\" --set hubUri=" + hubUri + " --version 0.0.2 oci://registry.relizahub.com/library/reliza-watcher")
 		if err == nil {
 			watcherInstalled = true
 		} else {

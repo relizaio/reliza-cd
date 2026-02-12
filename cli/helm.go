@@ -58,7 +58,7 @@ func ResolveHelmAuthSecret(secretName string) ProjectAuth {
 }
 
 func KubectlApply(path string) {
-	shellout(KubectlApp + " apply -f " + path)
+	dryRunShellout(KubectlApp + " apply -f " + path)
 }
 
 func cleanupHelmChart(helmChartPath string) {
@@ -304,7 +304,7 @@ func InstallHelmChart(groupPath string, rd *RelizaDeployment) error {
 	helmCmd := HelmApp + " upgrade --install " + helmChartName + " --create-namespace -n " + rd.Namespace + " -f " + groupPath + InstallValues + " " + groupPath + helmChartName
 	sugar.Info("Helm install command: ", helmCmd)
 	sugar.Info("Using values file: ", groupPath+InstallValues)
-	stdout, stderr, err := shellout(helmCmd)
+	stdout, stderr, err := dryRunShellout(helmCmd)
 	if err == nil {
 		sugar.Info("Successfully deployed chart ", helmChartName, " version ", rd.ArtVersion, " to namespace ", rd.Namespace)
 	} else {
@@ -431,7 +431,7 @@ func CreateNamespaceIfMissing(namespace string) {
 	if err != nil {
 		sugar.Error(err)
 	} else if nsListOutInt < 2 {
-		shellout(KubectlApp + " create ns " + namespace)
+		dryRunShellout(KubectlApp + " create ns " + namespace)
 	}
 }
 
@@ -456,15 +456,15 @@ func DeleteObsoleteDeployment(groupPath string) {
 		helmChartName := GetChartNameFromDeployment(&rd)
 		if !argoInfo.IsArgoEnabled {
 			sugar.Info("Uninstalling chart ", helmChartName, " from namespace ", rd.Namespace)
-			shellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
+			dryRunShellout(HelmApp + " uninstall " + helmChartName + " -n " + rd.Namespace)
 		} else {
 			sugar.Info("Uninstalling argo application for release", rd.Name, " from namespace ", rd.Namespace)
-			shellout(KubectlApp + " delete application -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
+			dryRunShellout(KubectlApp + " delete application -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
 		}
 
-		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
-		shellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=ecr-" + rd.Name + "' -n " + SecretsNamespace)
-		shellout(KubectlApp + " delete secret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
+		dryRunShellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
+		dryRunShellout(KubectlApp + " delete sealedsecret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=ecr-" + rd.Name + "' -n " + SecretsNamespace)
+		dryRunShellout(KubectlApp + " delete secret -l 'reliza.io/type=cdresource' -l 'reliza.io/name=" + rd.Name + "' -n " + SecretsNamespace)
 		os.RemoveAll(groupPath)
 	}
 }

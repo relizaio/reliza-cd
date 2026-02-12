@@ -49,6 +49,7 @@ var (
 	enableWatcher    bool
 	argoInfo         ArgoInfo
 	EnvMode          string
+	DryRun           bool
 )
 
 const (
@@ -89,6 +90,14 @@ func init() {
 		EnvMode = "STANDALONE"
 	}
 
+	DryRun = false
+	if strings.ToLower(os.Getenv("DRY_RUN")) == "true" {
+		DryRun = true
+	}
+
+	if DryRun {
+		sugar.Info("DRY_RUN mode is enabled - mutating helm/kubectl commands will be logged but not executed")
+	}
 	sugar.Info("Running Reliza CD in " + EnvMode + " mode.")
 	argoInfo = detectArgo()
 	if EnvMode == NewArgoMode && !argoInfo.IsArgoDetected {
@@ -122,6 +131,14 @@ func shellout(command string) (string, string, error) {
 	}
 
 	return stdout.String(), stderr.String(), err
+}
+
+func dryRunShellout(command string) (string, string, error) {
+	if DryRun {
+		sugar.Info("DRY_RUN: would execute: ", command)
+		return "", "", nil
+	}
+	return shellout(command)
 }
 
 func SetSealedCertificateOnTheHub(cert string) {
@@ -277,10 +294,10 @@ func ParseInstanceCycloneDXIntoDeployments(cyclonedxManifest string) []RelizaDep
 					hashes := *comp.Hashes
 					rd.ArtHash = hashes[0]
 				} else {
-				// Helm charts may not have hashes - use empty hash for public repos
-				sugar.Debug("No hash found for Helm artifact = " + rd.ArtUri + ", assuming public repository")
-				rd.ArtHash = cdx.Hash{Algorithm: cdx.HashAlgoSHA256, Value: ""}
-			}
+					// Helm charts may not have hashes - use empty hash for public repos
+					sugar.Debug("No hash found for Helm artifact = " + rd.ArtUri + ", assuming public repository")
+					rd.ArtHash = cdx.Hash{Algorithm: cdx.HashAlgoSHA256, Value: ""}
+				}
 				rlzDeployments = append(rlzDeployments, rd)
 			}
 		}

@@ -28,6 +28,7 @@ ARG GIT_COMMIT=git_commit_undefined
 ARG GIT_BRANCH=git_branch_undefined
 ARG VERSION=not_versioned
 ENV ARGO_HELM_VERSION=5.51.6
+RUN apk add --update --no-cache openssl
 RUN mkdir /app && adduser -u 1000 -D apprunner && chown apprunner:apprunner -R /app
 USER apprunner
 RUN mkdir -p /app/workspace && mkdir /app/tools

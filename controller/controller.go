@@ -103,6 +103,8 @@ func singleLoopRun() {
 func Loop() {
 	loopInit()
 
+	go cli.StartBackupScheduler()
+
 	for true {
 		singleLoopRun()
 		time.Sleep(15 * time.Second)

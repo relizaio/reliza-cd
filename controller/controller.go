@@ -90,7 +90,7 @@ func singleLoopRun() {
 
 		cli.InstallWatcher(&namespacesForWatcher)
 
-		if !isError {
+		if !isError && len(rlzDeployments) > 0 {
 			deleteObsoleteDeployments(&existingDeployments)
 		}
 

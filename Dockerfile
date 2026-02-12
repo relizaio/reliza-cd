@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM golang:1.25.3-alpine3.22@sha256:aee43c3ccbf24fdffb7295693b6e33b21e01baec1b2a55acc351fde345e9ec34 AS build-stage
+FROM --platform=$BUILDPLATFORM golang:1.25.6-alpine3.23@sha256:98e6cffc31ccc44c7c15d83df1d69891efee8115a5bb7ede2bf30a38af3e3c92 AS build-stage
 WORKDIR /build
 RUN apk add --update --no-cache cosign unzip 
 ENV CGO_ENABLED=0
@@ -19,7 +19,7 @@ RUN tar -xzvf helm-v3.19.0-linux-${TARGETARCH}.tar.gz
 RUN unzip reliza-cli-2024.07.10-linux-${TARGETARCH}.zip
 RUN mv kubectl-${TARGETARCH} kubectl
 
-FROM alpine:3.22.1@sha256:4bcff63911fcb4448bd4fdacec207030997caf25e9bea4045fa6c8c44de311d1 AS release-stage
+FROM alpine:3.23.3@sha256:25109184c71bdad752c8312a8623239686a9a2071e8825f20acb8f2198c3f659 AS release-stage
 ARG TARGETARCH
 ARG CI_ENV=noci
 ARG GIT_COMMIT=git_commit_undefined

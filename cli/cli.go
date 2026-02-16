@@ -370,7 +370,7 @@ spec:
 }
 
 func ProducePlainSecretYaml(w io.Writer, rd *RelizaDeployment, projAuth ProjectAuth, namespace string, helmInfo HelmRepoInfo) {
-	sugar.Info("ProducePlainSecretYaml - helmInfo: ", helmInfo)
+	sugar.Debug("ProducePlainSecretYaml - helmInfo: ", helmInfo)
 	secretTmpl :=
 		`apiVersion: v1
 kind: Secret
@@ -389,8 +389,8 @@ data:
   username: {{.Username}}
   password: {{.Password}}
   enableOCI: {{printf "%q" .EnableOci}}`
-	sugar.Info("ProducePlainSecretYaml - EnableOci: ", helmInfo.UseOci)
-	sugar.Info("ProducePlainSecretYaml - Url: ", helmInfo.RepoHost)
+	sugar.Debug("ProducePlainSecretYaml - EnableOci: ", helmInfo.UseOci)
+	sugar.Debug("ProducePlainSecretYaml - Url: ", helmInfo.RepoHost)
 	var secTmplRes SecretTemplateResolver
 	secTmplRes.Name = rd.Name
 	secTmplRes.NameBase64 = base64.StdEncoding.EncodeToString([]byte(rd.Name))
